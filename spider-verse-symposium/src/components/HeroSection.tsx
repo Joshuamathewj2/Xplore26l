@@ -23,8 +23,28 @@ export default function HeroSection() {
   // Track whether reduced-motion is preferred
   const prefersReducedMotion = useRef(false);
 
+  // gsap.quickTo setters for smooth parallax — initialized in useEffect
+  const parallaxSetters = useRef<{
+    charX: gsap.QuickToFunc | null;
+    charY: gsap.QuickToFunc | null;
+    titleSolidX: gsap.QuickToFunc | null;
+    titleSolidY: gsap.QuickToFunc | null;
+    titleStrokeX: gsap.QuickToFunc | null;
+    titleStrokeY: gsap.QuickToFunc | null;
+    webLX: gsap.QuickToFunc | null;
+    webLY: gsap.QuickToFunc | null;
+    webRX: gsap.QuickToFunc | null;
+    webRY: gsap.QuickToFunc | null;
+  }>({
+    charX: null, charY: null,
+    titleSolidX: null, titleSolidY: null,
+    titleStrokeX: null, titleStrokeY: null,
+    webLX: null, webLY: null,
+    webRX: null, webRY: null,
+  });
+
   // ──────────────────────────────────────────────
-  //  MULTI-LAYER PARALLAX (mouse-move)
+  //  MULTI-LAYER PARALLAX (mouse-move via gsap.quickTo)
   // ──────────────────────────────────────────────
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (prefersReducedMotion.current) return;
@@ -34,32 +54,23 @@ export default function HeroSection() {
     const nx = (e.clientX - rect.left - rect.width / 2) / (rect.width / 2);
     const ny = (e.clientY - rect.top - rect.height / 2) / (rect.height / 2);
 
+    const s = parallaxSetters.current;
+
     // Character — largest travel (±10px x, ±6px y)
-    if (imageWrapRef.current) {
-      imageWrapRef.current.style.transform =
-        `translate(calc(-50% + ${nx * -10}px), ${ny * -6}px)`;
-    }
+    s.charX?.(nx * -10);
+    s.charY?.(ny * -6);
 
     // Title containers — opposite direction, smaller (±4px)
-    if (titleSolidWrapRef.current) {
-      titleSolidWrapRef.current.style.transform =
-        `translate(${nx * 4}px, ${ny * 3}px)`;
-    }
-    if (titleStrokeWrapRef.current) {
-      titleStrokeWrapRef.current.style.transform =
-        `translate(${nx * 4}px, ${ny * 3}px)`;
-    }
+    s.titleSolidX?.(nx * 4);
+    s.titleSolidY?.(ny * 3);
+    s.titleStrokeX?.(nx * 4);
+    s.titleStrokeY?.(ny * 3);
 
     // Web-line SVGs — smallest travel (±3px)
-    if (webLeftRef.current) {
-      webLeftRef.current.style.transform =
-        `translate(${nx * -3}px, ${ny * -2}px)`;
-    }
-    if (webRightRef.current) {
-      // This SVG already has scaleX(-1), preserve it
-      webRightRef.current.style.transform =
-        `scaleX(-1) translate(${nx * 3}px, ${ny * -2}px)`;
-    }
+    s.webLX?.(nx * -3);
+    s.webLY?.(ny * -2);
+    s.webRX?.(nx * 3);
+    s.webRY?.(ny * -2);
   }, []);
 
   useEffect(() => {
@@ -75,10 +86,38 @@ export default function HeroSection() {
     mq.addEventListener("change", onMotionChange);
 
     // ──────────────────────────────────────────────
-    //  MOUSE-MOVE LISTENER
+    //  MOUSE-MOVE LISTENER + quickTo INITIALIZATION
     // ──────────────────────────────────────────────
     const isTouch = "ontouchstart" in window || navigator.maxTouchPoints > 0;
-    if (!isTouch) {
+    if (!isTouch && !prefersReducedMotion.current) {
+      const dur = 0.6;
+      const ease = "power3.out";
+
+      // Character uses xPercent=-50 as its base centering, so we
+      // animate x/y around that. The initial translateX(-50%) is
+      // kept via the xPercent GSAP property set once below.
+      if (imageWrapRef.current) {
+        gsap.set(imageWrapRef.current, { xPercent: -50 });
+        parallaxSetters.current.charX = gsap.quickTo(imageWrapRef.current, "x", { duration: dur, ease });
+        parallaxSetters.current.charY = gsap.quickTo(imageWrapRef.current, "y", { duration: dur, ease });
+      }
+      if (titleSolidWrapRef.current) {
+        parallaxSetters.current.titleSolidX = gsap.quickTo(titleSolidWrapRef.current, "x", { duration: dur, ease });
+        parallaxSetters.current.titleSolidY = gsap.quickTo(titleSolidWrapRef.current, "y", { duration: dur, ease });
+      }
+      if (titleStrokeWrapRef.current) {
+        parallaxSetters.current.titleStrokeX = gsap.quickTo(titleStrokeWrapRef.current, "x", { duration: dur, ease });
+        parallaxSetters.current.titleStrokeY = gsap.quickTo(titleStrokeWrapRef.current, "y", { duration: dur, ease });
+      }
+      if (webLeftRef.current) {
+        parallaxSetters.current.webLX = gsap.quickTo(webLeftRef.current, "x", { duration: dur, ease });
+        parallaxSetters.current.webLY = gsap.quickTo(webLeftRef.current, "y", { duration: dur, ease });
+      }
+      if (webRightRef.current) {
+        parallaxSetters.current.webRX = gsap.quickTo(webRightRef.current, "x", { duration: dur, ease });
+        parallaxSetters.current.webRY = gsap.quickTo(webRightRef.current, "y", { duration: dur, ease });
+      }
+
       window.addEventListener("mousemove", handleMouseMove);
     }
 
@@ -336,7 +375,6 @@ export default function HeroSection() {
     justifyContent: "center",
     pointerEvents: "none",
     willChange: "transform, opacity",
-    transition: "transform 0.9s cubic-bezier(0.23, 1, 0.32, 1)",
   };
 
   return (
@@ -377,7 +415,6 @@ export default function HeroSection() {
             zIndex: 2,
             pointerEvents: "none",
             willChange: "transform, opacity",
-            transition: "transform 0.9s cubic-bezier(0.23, 1, 0.32, 1)",
           }}
           viewBox="0 0 400 900"
           preserveAspectRatio="none"
@@ -459,7 +496,6 @@ export default function HeroSection() {
             pointerEvents: "none",
             transform: "scaleX(-1)",
             willChange: "transform, opacity",
-            transition: "transform 0.9s cubic-bezier(0.23, 1, 0.32, 1)",
           }}
           viewBox="0 0 400 900"
           preserveAspectRatio="none"
@@ -575,7 +611,6 @@ export default function HeroSection() {
             zIndex: 15,
             opacity: 0.88,
             willChange: "transform, opacity",
-            transition: "transform 0.9s cubic-bezier(0.23, 1, 0.32, 1)",
           }}
         >
           <Image
