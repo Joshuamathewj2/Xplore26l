@@ -1,15 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useCallback } from "react";
-import Image from "next/image";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 
 gsap.registerPlugin(ScrollTrigger);
 
+/* NOTE — the 3D character is NO LONGER rendered here. The Canvas lives in a
+   FIXED full-viewport layer mounted once in page.tsx (z-index 15) so it
+   persists across the whole scrollytelling page. The hero keeps its poster
+   sandwich because the solid title (z8) sits under that fixed layer and the
+   outline title (z16) sits over it. Character reactions to scroll are driven
+   by BEATS in src/lib/beats.ts, not by this component. */
 export default function HeroSection() {
   const sectionRef = useRef<HTMLElement>(null);
-  const imageWrapRef = useRef<HTMLDivElement>(null);
   const webLeftRef = useRef<SVGSVGElement>(null);
   const webRightRef = useRef<SVGSVGElement>(null);
   const titleSolidWrapRef = useRef<HTMLDivElement>(null);
@@ -25,8 +29,6 @@ export default function HeroSection() {
 
   // gsap.quickTo setters for smooth parallax — initialized in useEffect
   const parallaxSetters = useRef<{
-    charX: gsap.QuickToFunc | null;
-    charY: gsap.QuickToFunc | null;
     titleSolidX: gsap.QuickToFunc | null;
     titleSolidY: gsap.QuickToFunc | null;
     titleStrokeX: gsap.QuickToFunc | null;
@@ -36,7 +38,6 @@ export default function HeroSection() {
     webRX: gsap.QuickToFunc | null;
     webRY: gsap.QuickToFunc | null;
   }>({
-    charX: null, charY: null,
     titleSolidX: null, titleSolidY: null,
     titleStrokeX: null, titleStrokeY: null,
     webLX: null, webLY: null,
@@ -56,9 +57,8 @@ export default function HeroSection() {
 
     const s = parallaxSetters.current;
 
-    // Character — largest travel (±10px x, ±6px y)
-    s.charX?.(nx * -10);
-    s.charY?.(ny * -6);
+    // (The 3D character's own cursor glance lives inside Spider3D — the old
+    // ±10px DOM parallax on its wrapper went away with the fixed canvas.)
 
     // Title containers — opposite direction, smaller (±4px)
     s.titleSolidX?.(nx * 4);
@@ -93,14 +93,6 @@ export default function HeroSection() {
       const dur = 0.6;
       const ease = "power3.out";
 
-      // Character uses xPercent=-50 as its base centering, so we
-      // animate x/y around that. The initial translateX(-50%) is
-      // kept via the xPercent GSAP property set once below.
-      if (imageWrapRef.current) {
-        gsap.set(imageWrapRef.current, { xPercent: -50 });
-        parallaxSetters.current.charX = gsap.quickTo(imageWrapRef.current, "x", { duration: dur, ease });
-        parallaxSetters.current.charY = gsap.quickTo(imageWrapRef.current, "y", { duration: dur, ease });
-      }
       if (titleSolidWrapRef.current) {
         parallaxSetters.current.titleSolidX = gsap.quickTo(titleSolidWrapRef.current, "x", { duration: dur, ease });
         parallaxSetters.current.titleSolidY = gsap.quickTo(titleSolidWrapRef.current, "y", { duration: dur, ease });
@@ -131,7 +123,6 @@ export default function HeroSection() {
     const titleStroke = titleStrokeWrapRef.current;
     const chromRed = chromRedRef.current;
     const chromCyan = chromCyanRef.current;
-    const character = imageWrapRef.current;
     const bottomCards = bottomCardsRef.current;
     const cornerTop = cornerTopRef.current;
     const cornerBot = cornerBottomRef.current;
@@ -168,16 +159,13 @@ export default function HeroSection() {
       });
       if (titleSolid) gsap.set(titleSolid, { opacity: 0 });
       if (titleStroke) gsap.set(titleStroke, { opacity: 0 });
-      if (character) gsap.set(character, { opacity: 0 });
       if (bottomCards) gsap.set(bottomCards, { opacity: 0 });
       if (cornerTop) gsap.set(cornerTop, { opacity: 0 });
       if (cornerBot) gsap.set(cornerBot, { opacity: 0 });
 
       simpleFade
-        .to([webL, webR, titleSolid, titleStroke, character].filter(Boolean), {
+        .to([webL, webR, titleSolid, titleStroke].filter(Boolean), {
           opacity: (i, target) => {
-            // Character keeps its original 0.88 opacity
-            if (target === character) return 0.88;
             if (target === webL) return 0.4;
             if (target === webR) return 0.35;
             return 1;
@@ -209,7 +197,6 @@ export default function HeroSection() {
     if (titleStroke) gsap.set(titleStroke, { opacity: 0, scale: 0.92 });
     if (chromRed) gsap.set(chromRed, { opacity: 0 });
     if (chromCyan) gsap.set(chromCyan, { opacity: 0 });
-    if (character) gsap.set(character, { opacity: 0, y: 40 });
     if (bottomCards) gsap.set(bottomCards, { opacity: 0, y: 20 });
     if (cornerTop) gsap.set(cornerTop, { opacity: 0, y: -15 });
     if (cornerBot) gsap.set(cornerBot, { opacity: 0, y: 15 });
@@ -250,13 +237,8 @@ export default function HeroSection() {
       0.6
     );
 
-    // Step 3: Character — translateY from +40 to 0 while fading in (starts at t=0.55)
-    entrance.to(character, {
-      opacity: 0.88,
-      y: 0,
-      duration: 0.8,
-      ease: "power3.out",
-    }, 0.55);
+    // (Step 3 — character entrance — now lives on the fixed canvas layer in
+    // page.tsx: a CSS fade-in on the wrapper, timed to land with the title.)
 
     // Step 4: Bottom info cards + corner lines — fade/slide in last, staggered
     entrance.to(
@@ -286,17 +268,8 @@ export default function HeroSection() {
       chromBreathing.fromTo(chromCyan, { x: 1.5 }, { x: 3, duration: 2.2, ease: "sine.inOut" }, 0);
     }
 
-    // ──────────────────────────────────────────────
-    //  4. IDLE AMBIENT MOTION — slow vertical bob
-    // ──────────────────────────────────────────────
-    const idleBob = gsap.to(imageWrapRef.current, {
-      y: -5,
-      duration: 2.5,
-      ease: "sine.inOut",
-      repeat: -1,
-      yoyo: true,
-      delay: 1.8, // start after entrance settles
-    });
+    // (The old DOM idle bob is gone — the 3D character breathes/sways
+    // procedurally inside Spider3D, which reads scroll from scrollState.)
 
     // ──────────────────────────────────────────────
     //  5. SCROLL-TRIGGERED EXIT
@@ -310,16 +283,12 @@ export default function HeroSection() {
       },
     });
 
-    // Title & character fade + scale down
+    // Title fades + scales down. The 3D character does NOT fade here — it
+    // persists on the fixed layer and travels to the next beat instead.
     exitTl
       .to(
         [titleSolid, titleStroke].filter(Boolean),
         { opacity: 0, scale: 0.96, duration: 1, ease: "none" },
-        0
-      )
-      .to(
-        character,
-        { opacity: 0, scale: 0.97, duration: 1, ease: "none" },
         0
       )
       // Intensify web-line pulse (boost opacity of the energy pulse <g> elements)
@@ -333,9 +302,12 @@ export default function HeroSection() {
         { opacity: 0.7, duration: 0.4, ease: "none" },
         0
       )
-      // Then fade entire hero out
+      // Then fade the hero's remaining dressing out. IMPORTANT: never animate
+      // opacity on `section` itself — opacity<1 creates a stacking context,
+      // which would collapse the z8/z16 title sandwich around the fixed
+      // z15 canvas and pop the outline title behind the character mid-fade.
       .to(
-        section,
+        [webL, webR, bottomCards, cornerTop, cornerBot].filter(Boolean),
         { opacity: 0, duration: 0.6, ease: "none" },
         0.5
       );
@@ -346,9 +318,10 @@ export default function HeroSection() {
     return () => {
       entrance.kill();
       chromBreathing.kill();
-      idleBob.kill();
+      // Kill ONLY our own trigger — a global getAll().kill() would also tear
+      // down ScrollRig's reveal triggers on HMR.
+      exitTl.scrollTrigger?.kill();
       exitTl.kill();
-      ScrollTrigger.getAll().forEach((st) => st.kill());
       window.removeEventListener("mousemove", handleMouseMove);
       mq.removeEventListener("change", onMotionChange);
     };
@@ -393,6 +366,7 @@ export default function HeroSection() {
       <section
         ref={sectionRef}
         id="hero"
+        data-beat="hero"
         style={{
           position: "relative",
           width: "100%",
@@ -598,34 +572,10 @@ export default function HeroSection() {
           </h1>
         </div>
 
-        {/* ── Character image — z-index 15, ABOVE title ── */}
-        <div
-          ref={imageWrapRef}
-          style={{
-            position: "absolute",
-            bottom: 0,
-            left: "50%",
-            transform: "translateX(-50%)",
-            width: "min(1400px, 125vw)",
-            height: "130vh",
-            zIndex: 15,
-            opacity: 0.88,
-            willChange: "transform, opacity",
-          }}
-        >
-          <Image
-            src="/spiderman-hero.png"
-            alt="Miles Morales Spider-Man"
-            fill
-            priority
-            style={{
-              objectFit: "contain",
-              objectPosition: "bottom",
-              filter: "contrast(1.1) brightness(1.02)",
-            }}
-            sizes="(max-width: 768px) 140vw, 1400px"
-          />
-        </div>
+        {/* ── Character — the FIXED 3D canvas layer (page.tsx, z-index 15)
+             passes between the solid title (z8, behind him) and the outline
+             title below (z16, in front) — same poster sandwich as before,
+             but the canvas itself lives outside this section and persists. ── */}
 
         {/* ── Title text — z-index 16, ABOVE character (outlined/stroke only) ── */}
         <div

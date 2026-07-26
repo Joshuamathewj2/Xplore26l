@@ -1,0 +1,20 @@
+# Local working directories — large 3D source assets, not part of the site
+_nixon_models/
+_mixamo/
+_unused_models/
+
+# Node
+node_modules/
+.next/
+out/
+build/
+
+# Env / logs
+.env*
+!.env.example
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db

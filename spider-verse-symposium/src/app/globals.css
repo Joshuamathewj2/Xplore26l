@@ -53,6 +53,20 @@ html {
   overflow-x: hidden;
 }
 
+/* ── LENIS SMOOTH SCROLL (ScrollRig.tsx) ──
+   Lenis stamps these classes on <html> while active. Native CSS smooth
+   scrolling MUST be off underneath it — the two easings fight and the
+   scroll rubber-bands. (With prefers-reduced-motion Lenis is never
+   created, so plain native scrolling is untouched.) */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
 body {
   background: var(--ink-black);
   color: var(--paper-white);
