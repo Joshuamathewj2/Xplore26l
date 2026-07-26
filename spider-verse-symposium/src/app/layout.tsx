@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 
@@ -19,6 +19,11 @@ export const metadata: Metadata = {
       "Cross dimensions and join XPLORE'26 — a convergence of innovators, creators, and visionaries.",
     type: "website",
   },
+};
+
+/** `themeColor` moved out of `metadata`: this Next version only honours it in
+ *  a `viewport` export and warns on every build otherwise. */
+export const viewport: Viewport = {
   themeColor: "#0A0A0A",
 };
 

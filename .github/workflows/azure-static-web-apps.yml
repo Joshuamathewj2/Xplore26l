@@ -1,0 +1,69 @@
+name: Azure Static Web Apps
+
+# Deploys the landing page to Azure Static Web Apps.
+#
+#  • push to main  → production
+#  • pull request  → its own temporary PREVIEW environment with a unique URL
+#    (Azure posts the link on the PR). The environment is destroyed
+#    automatically when the PR closes — that's the `closed` job below.
+#
+# SETUP (one-time, needs the Azure portal):
+#   1. Create a Static Web App resource, plan = Free, source = GitHub,
+#      repo = chrsnikhil/Xplore26, branch = main.
+#   2. When asked for build details, choose "Custom" and set
+#        app location:    spider-verse-symposium
+#        output location: out
+#      (Azure may auto-commit its own workflow file — delete it and keep this
+#      one, otherwise two workflows will race to deploy.)
+#   3. Copy the deployment token into the repo:
+#        Settings → Secrets and variables → Actions → New repository secret
+#        name: AZURE_STATIC_WEB_APPS_API_TOKEN
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+    branches: [main]
+
+concurrency:
+  group: swa-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build_and_deploy:
+    name: Build and deploy
+    if: github.event_name == 'push' || github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write # lets Azure comment the preview URL on the PR
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+          lfs: false
+
+      - name: Deploy
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          action: upload
+          # Repo-root-relative path to the Next.js app.
+          app_location: spider-verse-symposium
+          # `output: "export"` in next.config.ts writes here.
+          output_location: out
+          # No serverless API in this project.
+          api_location: ""
+
+  close_pull_request:
+    name: Tear down preview environment
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Close
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          action: close

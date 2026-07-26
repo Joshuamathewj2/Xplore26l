@@ -1,0 +1,56 @@
+name: CI
+
+# Gate every PR (and every push to main) on a clean typecheck + production
+# build. Deployment lives in azure-static-web-apps.yml; this job only proves
+# the code compiles, so a broken build can never be merged.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# A new push to the same PR cancels the previous run — no point burning
+# minutes on a commit that's already superseded.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Typecheck & build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: spider-verse-symposium
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: spider-verse-symposium/package-lock.json
+
+      # `npm ci` (not `install`) so the lockfile is authoritative and the run
+      # is reproducible.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Build
+        run: npm run build
+
+      # Cheap guard: the 3D assets dominate the payload, so fail loudly if a
+      # PR balloons the export. Tune the threshold if the site legitimately
+      # grows.
+      - name: Report bundle size
+        run: |
+          SIZE_KB=$(du -sk out | cut -f1)
+          echo "Static export size: $((SIZE_KB / 1024)) MB"
+          if [ "$SIZE_KB" -gt 61440 ]; then
+            echo "::warning::Static export exceeds 60 MB ($((SIZE_KB / 1024)) MB) — check for stray assets in public/"
+          fi
