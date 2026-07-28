@@ -34,8 +34,21 @@ on:
 # inside 71 seconds cancelled the production deploy. The site kept serving a
 # three-day-old build, every video 404'd to the SPA fallback, and the run
 # showed as "cancelled" rather than failed — so nothing looked broken.
+# Production gets a group of its own that NOTHING else can land in.
+#
+# The group used to key on github.ref, which looks like it separates a push to
+# main from a PR run — and does not. On a merged PR's `closed` event github.ref
+# resolves to the BASE branch, so the teardown run and the production deploy
+# both landed in swa-...-refs/heads/main. The teardown run is a pull_request
+# event, so it still cancels in progress, and it killed the production deploy
+# that had started in the same second. Twice.
+#
+# Restricting cancel-in-progress to pull_request events was necessary but not
+# sufficient: what cancels production is another run sharing its group, and the
+# canceller's setting is what applies. A literal group name is the only thing
+# that makes the collision impossible rather than unlikely.
 concurrency:
-  group: swa-${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.event_name == 'push' && 'swa-production' || format('swa-preview-{0}', github.event.number) }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
