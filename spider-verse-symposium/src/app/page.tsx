@@ -1,286 +1,752 @@
 "use client";
 
+import { useEffect, useState, useRef } from "react";
+import Image from "next/image";
+import sponsorsHeading from "../../images/sponsors-heading.webp";
 import HeroSection from "@/components/HeroSection";
-import Spider3D from "@/components/Spider3D";
-import ScrollRig from "@/components/ScrollRig";
-import CTAButton from "@/components/CTAButton";
-import ImpactCrack from "@/components/ImpactCrack";
+import FeaturedEventsSection from "@/components/FeaturedEventsSection";
+import SplashScreen from "@/components/SplashScreen";
+import MiguelStage from "@/components/MiguelStage";
+import ComicStamp from "@/components/ComicStamp";
+import SponsorsPeekCharacter from "@/components/SponsorsPeekCharacter";
+import SpiderTracerIcon from "@/components/SpiderTracerIcon";
 
-/* ════════════════════════════════════════════════════════════
-   SCROLLYTELLING LAYOUT
+export default function EntryPortal() {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const [isGlitching, setIsGlitching] = useState(false);
+  const [glitchStyle, setGlitchStyle] = useState({});
+  const [isHovered, setIsHovered] = useState(false);
+  const [isClicked, setIsClicked] = useState(false);
+  const [isPlayingVideo, setIsPlayingVideo] = useState(false);
+  const [isRevealed, setIsRevealed] = useState(false);
+  // The splash owns the very first beat: its zoom punches transparent holes
+  // through its own black overlay, so the reveal uncovers the portal itself
+  // rather than a stand-in. Everything below is mounted from the first paint.
+  const [splashDone, setSplashDone] = useState(false);
+  const [removeOverlay, setRemoveOverlay] = useState(false);
+  const redirectTriggered = useRef(false);
 
-   • ONE persistent 3D canvas in a position:fixed full-viewport layer at
-     z-index 15. It mounts once, never remounts, and every section scrolls
-     past it. Scroll → character reactions are driven by BEATS
-     (src/lib/beats.ts) reading scrollState (written by <ScrollRig/>).
-   • Every `data-beat` section below maps 1:1, in order, to a BEATS entry.
-     Section BACKGROUNDS paint below the canvas (no z-index), section
-     CONTENT sits at z-30 — above the character — so copy stays readable
-     while he passes behind it. The hero is the exception: its solid title
-     (z8) is behind him and its outline title (z16) in front (the sandwich).
-   • `data-reveal` elements get a scroll-triggered rise+fade (skipped under
-     prefers-reduced-motion).
-   ════════════════════════════════════════════════════════════ */
+  // Randomized glitch generator for the portal UI
+  useEffect(() => {
+    let active = true;
 
-/* Shared bits for the placeholder sections — short, on-theme copy. */
-const displayFont: React.CSSProperties = {
-  fontFamily: "var(--font-display)",
-  color: "var(--paper-white)",
-  textTransform: "uppercase",
-  letterSpacing: "0.05em",
-};
+    const triggerGlitch = () => {
+      if (!active || isClicked) return;
 
-const kickerStyle: React.CSSProperties = {
-  fontFamily: "var(--font-display)",
-  color: "var(--spider-red)",
-  letterSpacing: "0.3em",
-  textTransform: "uppercase",
-  fontSize: 13,
-};
+      const nextDelay = Math.random() * 2500 + 1500;
 
-/* Translucent comic-panel card — lets the character read through the gaps. */
-function PanelCard({
-  title,
-  tag,
-  children,
-}: {
-  title: string;
-  tag: string;
-  children: React.ReactNode;
-}) {
+      setTimeout(() => {
+        if (!active || isClicked) return;
+
+        setIsGlitching(true);
+
+        const xOffset = (Math.random() - 0.5) * 16;
+        const yOffset = (Math.random() - 0.5) * 12;
+        const skewAngle = (Math.random() - 0.5) * 8;
+        const clipTop = Math.random() * 70;
+        const clipBottom = clipTop + Math.random() * 25 + 5;
+        const filterVal = `hue-rotate(${Math.random() * 360}deg) saturate(2)`;
+
+        setGlitchStyle({
+          transform: `translate(${xOffset}px, ${yOffset}px) skew(${skewAngle}deg)`,
+          clipPath: `inset(${clipTop}% 0 ${100 - clipBottom}% 0)`,
+          filter: filterVal,
+          opacity: 0.85,
+        });
+
+        const duration = Math.random() * 150 + 50;
+        setTimeout(() => {
+          if (!active) return;
+          setIsGlitching(false);
+          setGlitchStyle({});
+          
+          if (Math.random() > 0.6) {
+            setTimeout(() => {
+              if (!active || isClicked) return;
+              setIsGlitching(true);
+              const xOffset2 = (Math.random() - 0.5) * 20;
+              const yOffset2 = (Math.random() - 0.5) * 15;
+              const clipTop2 = Math.random() * 80;
+              const clipBottom2 = clipTop2 + Math.random() * 15;
+              setGlitchStyle({
+                transform: `translate(${xOffset2}px, ${yOffset2}px)`,
+                clipPath: `inset(${clipTop2}% 0 ${100 - clipBottom2}% 0)`,
+                filter: `invert(1) hue-rotate(180deg)`,
+                opacity: 0.7,
+              });
+              setTimeout(() => {
+                if (!active) return;
+                setIsGlitching(false);
+                setGlitchStyle({});
+                triggerGlitch();
+              }, 60);
+            }, 80);
+          } else {
+            triggerGlitch();
+          }
+        }, duration);
+
+      }, nextDelay);
+    };
+
+    triggerGlitch();
+
+    return () => {
+      active = false;
+    };
+  }, [isClicked]);
+
+  // Reveal the landing page by hiding/unmounting the video and loading overlays
+  const triggerReveal = () => {
+    if (redirectTriggered.current) return;
+    redirectTriggered.current = true;
+
+    // Hard Cut / Instant Hide: Set style to display none immediately to bypass React async delay
+    if (overlayRef.current) {
+      overlayRef.current.style.display = "none";
+    }
+    
+    setIsRevealed(true);
+    setRemoveOverlay(true);
+  };
+
+  // Click handler to trigger instant playback
+  const handleExploreClick = () => {
+    if (isClicked) return;
+    setIsClicked(true);
+    setIsPlayingVideo(true);
+
+    if (videoRef.current) {
+      videoRef.current.play().catch((err) => {
+        console.warn("Autoplay block or playback interruption: ", err);
+        // Fallback to immediate reveal if video completely fails to play
+        triggerReveal();
+      });
+    }
+
+    setIsGlitching(true);
+    setGlitchStyle({
+      transform: "scale(1.15) skew(15deg)",
+      filter: "hue-rotate(270deg) contrast(3) saturate(4)",
+      clipPath: "none",
+    });
+  };
+
+  // Video play / time update / ended handlers
+  const handleVideoPlay = () => {
+    // 1.3s hard cap timer
+    const capTimer = setTimeout(() => {
+      triggerReveal();
+    }, 1300);
+
+    return () => clearTimeout(capTimer);
+  };
+
+  const handleVideoTimeUpdate = () => {
+    if (videoRef.current && videoRef.current.currentTime >= 1.3) {
+      triggerReveal();
+    }
+  };
+
+  const handleVideoEnded = () => {
+    triggerReveal();
+  };
+
   return (
-    <div
-      data-reveal
-      className="relative border border-[rgba(242,239,233,0.14)] p-6 backdrop-blur-[2px]"
-      style={{ background: "rgba(10,10,10,0.72)" }}
+    <main 
+      className="bg-[#0A0A0A] w-full min-h-screen relative"
+      style={{
+        height: isRevealed ? "auto" : "100vh",
+        overflowY: isRevealed ? "visible" : "hidden",
+        overflowX: "hidden",
+      }}
     >
-      <span style={kickerStyle}>{tag}</span>
-      <h3 className="mt-2 text-2xl" style={displayFont}>
-        {title}
-      </h3>
-      <p className="mt-3 text-sm leading-relaxed opacity-60">{children}</p>
-      <span
-        className="absolute top-0 left-0 h-3 w-3 border-t-2 border-l-2"
-        style={{ borderColor: "var(--spider-red)" }}
-      />
-      <span
-        className="absolute bottom-0 right-0 h-3 w-3 border-b-2 border-r-2"
-        style={{ borderColor: "var(--glitch-cyan)" }}
-      />
-    </div>
-  );
-}
+      {!splashDone && <SplashScreen onComplete={() => setSplashDone(true)} />}
 
-export default function Home() {
-  return (
-    <main style={{ background: "#0A0A0A", minHeight: "100vh", overflowX: "hidden" }}>
-      {/* Scroll engine: Lenis + beat mapping. Renders nothing. */}
-      <ScrollRig />
+      {/* CSS Animation definitions */}
+      <style jsx global>{`
+        @keyframes portalGlow {
+          0%, 100% {
+            filter: drop-shadow(0 0 12px rgba(0, 150, 255, 0.75)) drop-shadow(0 0 25px rgba(0, 150, 255, 0.35));
+          }
+          50% {
+            filter: drop-shadow(0 0 12px rgba(0, 255, 102, 0.75)) drop-shadow(0 0 25px rgba(0, 255, 102, 0.35));
+          }
+        }
 
-      {/* ── THE persistent 3D layer ─────────────────────────────────────
-          fixed + z15: above section backgrounds and the hero's solid title
-          (z8), below all z-30 section content and the hero's outline title
-          (z16). pointer-events:none so it never blocks the page. Mounted
-          exactly once — the 6.5MB model loads exactly once. The CSS fadeIn
-          replaces the old hero entrance for the character. ── */}
-      <div
-        aria-hidden
-        style={{
-          position: "fixed",
-          inset: 0,
-          zIndex: 15,
-          pointerEvents: "none",
-          animation: "fadeIn 1.1s ease 0.55s both",
+        @keyframes portalGlowHover {
+          0% {
+            filter: drop-shadow(-4px 2px 0 rgba(255, 0, 85, 0.8)) drop-shadow(4px -2px 0 rgba(0, 229, 255, 0.8)) drop-shadow(0 0 15px rgba(0, 229, 255, 0.6));
+            transform: translate(-3px, 1px) scale(1.02);
+            clip-path: inset(15% 0 55% 0);
+          }
+          10% {
+            filter: drop-shadow(4px -2px 0 rgba(255, 0, 85, 0.8)) drop-shadow(-4px 2px 0 rgba(0, 229, 255, 0.8)) drop-shadow(0 0 15px rgba(0, 229, 255, 0.6));
+            transform: translate(3px, -1px) scale(0.98);
+            clip-path: inset(0 0 0 0);
+          }
+          20% {
+            filter: drop-shadow(0 0 15px rgba(0, 255, 102, 0.8));
+            transform: translate(0, 0) scale(1);
+            clip-path: inset(70% 0 5% 0);
+          }
+          30% {
+            filter: drop-shadow(-5px -2px 0 rgba(255, 0, 85, 0.8)) drop-shadow(5px 2px 0 rgba(0, 229, 255, 0.8)) drop-shadow(0 0 25px rgba(0, 229, 255, 0.8));
+            transform: translate(-2px, -3px) scale(1.03);
+            clip-path: inset(0 0 0 0);
+          }
+          40% {
+            filter: drop-shadow(0 0 15px rgba(0, 150, 255, 0.8));
+            transform: translate(2px, 2px) scale(0.97);
+            clip-path: inset(35% 0 45% 0);
+          }
+          50% {
+            filter: drop-shadow(-2px 3px 0 rgba(255, 0, 85, 0.8)) drop-shadow(2px -3px 0 rgba(0, 229, 255, 0.8)) drop-shadow(0 0 15px rgba(0, 229, 255, 0.6));
+            transform: translate(-1px, 2px) scale(1.01);
+            clip-path: inset(0 0 0 0);
+          }
+          60% {
+            filter: drop-shadow(0 0 20px rgba(0, 255, 102, 0.8));
+            transform: translate(0, 0) scale(1);
+            clip-path: inset(10% 0 75% 0);
+          }
+          70% {
+            filter: drop-shadow(-4px -2px 0 rgba(255, 0, 85, 0.8)) drop-shadow(4px 2px 0 rgba(0, 229, 255, 0.8)) drop-shadow(0 0 25px rgba(0, 229, 255, 0.8));
+            transform: translate(3px, -2px) scale(1.02);
+            clip-path: inset(0 0 0 0);
+          }
+          80% {
+            filter: drop-shadow(0 0 15px rgba(0, 150, 255, 0.8));
+            transform: translate(-2px, 3px) scale(0.99);
+            clip-path: inset(80% 0 2% 0);
+          }
+          90% {
+            filter: drop-shadow(-3px -1px 0 rgba(255, 0, 85, 0.8)) drop-shadow(3px 1px 0 rgba(0, 229, 255, 0.8)) drop-shadow(0 0 20px rgba(0, 229, 255, 0.7));
+            transform: translate(1px, -1px) scale(1.01);
+            clip-path: inset(0 0 0 0);
+          }
+          100% {
+            filter: drop-shadow(-4px 2px 0 rgba(255, 0, 85, 0.8)) drop-shadow(4px -2px 0 rgba(0, 229, 255, 0.8)) drop-shadow(0 0 15px rgba(0, 229, 255, 0.6));
+            transform: translate(-3px, 1px) scale(1.02);
+            clip-path: inset(15% 0 55% 0);
+          }
+        }
+
+        @keyframes microJitter {
+          0%, 100% { transform: translate(0, 0); }
+          10% { transform: translate(-0.5px, 0.5px); }
+          20% { transform: translate(0.5px, -0.5px); }
+          30% { transform: translate(-0.5px, -0.5px); }
+          40% { transform: translate(0.5px, 0.5px); }
+          50% { transform: translate(-0.5px, 0.5px); }
+        }
+
+        .portal-base {
+          animation: portalGlow 5s ease-in-out infinite;
+          transition: filter 0.5s ease;
+        }
+
+        .portal-base.hovered {
+          animation: portalGlowHover 0.3s linear infinite;
+        }
+
+        .portal-base.clicked {
+          animation: none;
+          filter: drop-shadow(0 0 35px #00E5FF) invert(1);
+        }
+
+        .text-glow {
+          text-shadow: 0 0 8px rgba(0, 229, 255, 0.8),
+                       0 0 20px rgba(0, 229, 255, 0.4);
+          transition: all 0.3s ease;
+        }
+
+        .text-glow:hover {
+          text-shadow: 0 0 15px rgba(0, 229, 255, 1),
+                       0 0 30px rgba(0, 229, 255, 0.7),
+                       0 0 45px rgba(0, 229, 255, 0.5);
+          letter-spacing: 0.18em;
+        }
+
+        .text-glow.clicked {
+          animation: microJitter 0.1s infinite;
+          color: #e23636;
+          text-shadow: 0 0 20px #e23636, 0 0 40px #e23636;
+        }
+      `}</style>
+
+      {/* 1. Main Hero Section Landing Page mounted in the background */}
+      <div 
+        style={{ 
+          opacity: isRevealed ? 1 : 0,
+          transition: "opacity 0.4s ease-in-out",
+          width: "100%",
+          minHeight: "100vh",
+          pointerEvents: isRevealed ? "auto" : "none",
         }}
       >
-        {/* Inner wrapper (NOT the fixed element — transforms on a fixed
-            element's ancestor would re-anchor it): ImpactCrack shakes this
-            when the final punch lands. */}
-        <div data-impact-shake style={{ width: "100%", height: "100%" }}>
-          <Spider3D />
+        {/* Miguel: one persistent 3D canvas that every section scrolls past.
+            Lives INSIDE this wrapper so it shares a stacking context with the
+            sections it weaves through — see the z-index note in MiguelStage. */}
+        <MiguelStage start={isRevealed} />
+
+        {/* The hero holds its entrance until the portal actually uncovers it,
+            so the sequence isn't spent behind an opacity-0 wrapper. */}
+        <HeroSection start={isRevealed} />
+        <FeaturedEventsSection />
+
+        {/* Zero-height seam: lets a decorative stamp straddle the boundary
+            between two sections without either section needing to know
+            about it. */}
+        <div style={{ position: "relative", height: 0 }}>
+          <ComicStamp
+            text="POW!"
+            rotate={-6}
+            style={{ top: -22, left: "8%", zIndex: 25 }}
+          />
         </div>
-      </div>
 
-      {/* Viewport "glass" that cracks when the register punch lands.
-          pointer-events:none — the CTA under it stays clickable. */}
-      <ImpactCrack />
+        {/* Video Asset Integration (loader1.mp4)
 
-      {/* ── BEAT 1: HERO (data-beat lives inside HeroSection) ── */}
-      <HeroSection />
+            `isolation: isolate` is load-bearing: this section is
+            position:relative with no z-index, so it creates NO stacking
+            context of its own and its z-10/z-20 gradient masks below were
+            competing directly with the persistent 3D canvas in the page's
+            stacking context. Isolating it keeps those masks inside this
+            section, where they belong, instead of painting over the character
+            passing in front of it. */}
+        <section
+          className="relative w-full h-[40vh] overflow-hidden bg-[#0A0A0A] flex items-center justify-center"
+          style={{ isolation: "isolate" }}
+        >
+          {/* Subtle dark gradient overlay mask to transition smoothly */}
+          <div 
+            className="absolute inset-0 z-20 pointer-events-none"
+            style={{
+              background: "linear-gradient(to bottom, #0A0A0A 0%, rgba(10, 10, 10, 0) 25%, rgba(10, 10, 10, 0) 75%, #0A0A0A 100%)",
+            }}
+          />
+          {/* Dark blue multiverse ambient glow */}
+          <div 
+            className="absolute inset-0 z-10 pointer-events-none mix-blend-screen opacity-45"
+            style={{
+              background: "radial-gradient(circle at center, rgba(13, 71, 161, 0.5) 0%, rgba(10, 10, 10, 0) 80%)",
+            }}
+          />
 
-      {/* ── BEAT 2: ABOUT — character drifts right, copy owns the left ── */}
-      <section
-        id="about"
-        data-beat="about"
-        className="relative min-h-screen flex items-center px-6 md:px-16"
-      >
-        <div className="absolute inset-0 halftone-bg pointer-events-none" />
-        <div className="relative z-30 max-w-xl" data-reveal>
-          <span style={kickerStyle}>The Symposium</span>
-          <h2 className="mt-4 text-4xl md:text-6xl chromatic-text" style={displayFont}>
-            Where Dimensions Collide
-          </h2>
-          <p className="mt-6 text-base leading-relaxed opacity-70 max-w-md">
-            XPLORE&apos;26 tears a hole between disciplines — two days where
-            engineers, designers and dreamers cross into each other&apos;s
-            universes. Every timeline welcome. Bring your own canon.
-          </p>
-          <p className="mt-4 text-sm opacity-50 max-w-md">
-            One campus. Forty events. Infinite Earths.
-          </p>
-        </div>
-      </section>
+          <video
+            src="/loader1.mp4"
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="auto"
+            className="w-full h-full object-cover"
+            style={{
+              width: "100%",
+              height: "100%",
+            }}
+          />
+        </section>
 
-      {/* ── BEAT 3: EVENTS — character in profile on the left, grid right ── */}
-      <section
-        id="events"
-        data-beat="events"
-        className="relative min-h-screen flex items-center px-6 md:px-16"
-      >
-        <div className="absolute inset-0 halftone-bg pointer-events-none" />
-        <div className="relative z-30 ml-auto w-full md:w-3/5">
-          <div data-reveal>
-            <span style={kickerStyle}>Line-Up</span>
-            <h2 className="mt-4 mb-10 text-4xl md:text-6xl" style={displayFont}>
-              Events
+        <section
+          id="sponsors"
+          className="relative z-10 min-h-[50vh] flex flex-col items-center justify-center px-4"
+          style={{
+            background:
+              "linear-gradient(180deg, var(--ink-black), #062654 50%, var(--ink-black))",
+          }}
+        >
+          <div className="relative">
+            <div
+              className="absolute -inset-4 border-2 border-[var(--web-blue-light)] opacity-20"
+              style={{ transform: "rotate(1deg)" }}
+            />
+            {/* Heading is artwork; the <h2> keeps a real heading for assistive
+                tech, with the alt text carrying the name. */}
+            <h2
+              style={{
+                margin: 0,
+                width: "clamp(240px, 42vw, 560px)",
+                lineHeight: 0,
+              }}
+            >
+              <Image
+                src={sponsorsHeading}
+                alt="Sponsors"
+                style={{
+                  width: "100%",
+                  height: "auto",
+                  filter:
+                    "drop-shadow(0 0 1px rgba(242,239,233,0.55)) drop-shadow(0 6px 26px rgba(0,0,0,0.85))",
+                }}
+                sizes="(max-width: 768px) 80vw, 560px"
+              />
             </h2>
           </div>
-          <div className="grid gap-5 sm:grid-cols-2">
-            <PanelCard tag="Flagship" title="Hack the Verse">
-              24 hours. One anomaly. Build the thing that stitches the
-              multiverse back together.
-            </PanelCard>
-            <PanelCard tag="Arena" title="Circuit Break">
-              Head-to-head hardware showdown — fastest rig across the
-              dimensional rift wins.
-            </PanelCard>
-            <PanelCard tag="Stage" title="Glitch Talks">
-              Lightning talks from people who broke reality and shipped it
-              anyway.
-            </PanelCard>
-            <PanelCard tag="Lab" title="Web-Shooter Workshop">
-              Hands-on builds: from zero to thwip in ninety minutes.
-            </PanelCard>
-          </div>
-        </div>
-      </section>
 
-      {/* ── BEAT 4: TRACKS — low hero angle, copy left ── */}
-      <section
-        id="tracks"
-        data-beat="tracks"
-        className="relative min-h-screen flex items-center px-6 md:px-16"
-      >
-        <div className="absolute inset-0 halftone-bg pointer-events-none" />
-        <div className="relative z-30 max-w-xl">
-          <div data-reveal>
-            <span style={kickerStyle}>Choose Your Timeline</span>
-            <h2 className="mt-4 mb-8 text-4xl md:text-6xl" style={displayFont}>
-              Tracks
-            </h2>
-          </div>
-          <ul className="space-y-4">
-            {[
-              ["Earth-928", "AI & Emerging Tech"],
-              ["Earth-1610", "Design & Interaction"],
-              ["Earth-616", "Core Engineering"],
-              ["Earth-65", "Startups & Impact"],
-            ].map(([earth, name]) => (
-              <li
-                key={earth}
-                data-reveal
-                className="flex items-baseline gap-4 border-b border-[rgba(242,239,233,0.12)] pb-3"
-              >
-                <span
-                  className="text-xs"
-                  style={{ ...kickerStyle, color: "var(--glitch-cyan)" }}
-                >
-                  {earth}
-                </span>
-                <span className="text-xl md:text-2xl" style={displayFont}>
-                  {name}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
-
-      {/* ── BEAT 5: SPONSORS — character small in the distance behind grid ── */}
-      <section
-        id="sponsors"
-        data-beat="sponsors"
-        className="relative min-h-screen flex flex-col items-center justify-center px-6"
-      >
-        <div className="absolute inset-0 halftone-bg pointer-events-none" />
-        <div className="relative z-30 w-full max-w-3xl text-center">
-          <div data-reveal>
-            <span style={kickerStyle}>Backed Across the Multiverse</span>
-            <h2 className="mt-4 mb-10 text-4xl md:text-6xl" style={displayFont}>
-              Sponsors
-            </h2>
-          </div>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-            {["Alchemax", "Oscorp R&D", "Daily Bugle", "Horizon Labs", "Parker Ind.", "Stark Grid"].map(
-              (s) => (
-                <div
-                  key={s}
-                  data-reveal
-                  className="border border-[rgba(242,239,233,0.12)] py-6 text-sm uppercase tracking-widest opacity-60"
-                  style={{
-                    background: "rgba(10,10,10,0.6)",
-                    fontFamily: "var(--font-display)",
-                  }}
-                >
-                  {s}
-                </div>
-              )
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* ── BEAT 6: REGISTER — final confrontation + CTA ── */}
-      <section
-        id="register"
-        data-beat="register"
-        className="relative min-h-screen flex flex-col items-center justify-center px-6 text-center"
-      >
-        <div className="absolute inset-0 halftone-bg pointer-events-none" />
-        <div className="relative z-30 flex flex-col items-center" data-reveal>
-          <span style={kickerStyle}>Your Universe Needs You</span>
-          <h2 className="mt-4 text-5xl md:text-7xl chromatic-text" style={displayFont}>
-            Cross Over
-          </h2>
-          <p className="mt-6 max-w-md text-sm opacity-60">
-            Registration portals are open. Step through before the rift
-            closes — January 2026.
-          </p>
-          <CTAButton text="Register Now" href="#register" delay={0.4} />
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer
-        className="relative z-30 py-12 px-4 text-center border-t border-[rgba(226,54,54,0.2)]"
-        style={{ background: "var(--ink-black)", fontFamily: "var(--font-body)" }}
-      >
-        <div className="max-w-4xl mx-auto">
           <p
-            className="text-2xl mb-4"
+            className="mt-8 text-center max-w-lg opacity-50 text-sm tracking-wider uppercase"
             style={{
               fontFamily: "var(--font-display)",
-              color: "var(--spider-red)",
-              letterSpacing: "0.1em",
+              letterSpacing: "0.2em",
             }}
           >
-            XPLORE&apos;26
+            Partners across the multiverse
           </p>
-          <p className="text-sm opacity-40">
-            © 2026 XPLORE&apos;26. All dimensions reserved.
+          <div className="absolute inset-0 halftone-bg pointer-events-none" />
+          <SponsorsPeekCharacter />
+        </section>
+
+        {/* ── Event coordinators ──
+            Sits between the sponsors block and the footer. Numbers are real
+            contact details, so they are `tel:` links (digits only in the
+            href, +91 country code so they dial from any handset) with the
+            spaced grouping kept for reading. */}
+        <section
+          id="coordinators"
+          className="relative z-10 px-4"
+          style={{
+            background: "var(--ink-black)",
+            padding: "clamp(48px, 7vw, 80px) 16px",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+          }}
+        >
+          <ComicStamp
+            text="SNIKT!"
+            rotate={7}
+            style={{ top: "2%", right: "6%", zIndex: 5 }}
+          />
+          <h2
+            style={{
+              margin: 0,
+              fontFamily: "var(--font-display)",
+              fontSize: "clamp(1.4rem, 3.4vw, 2.2rem)",
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              color: "var(--paper-white)",
+              textAlign: "center",
+            }}
+          >
+            Event Coordinators
+          </h2>
+          <p
+            style={{
+              marginTop: 10,
+              marginBottom: "clamp(28px, 4vw, 40px)",
+              fontFamily: "var(--font-mono)",
+              fontSize: "0.72rem",
+              letterSpacing: "0.22em",
+              textTransform: "uppercase",
+              color: "var(--paper-white)",
+              opacity: 0.45,
+              textAlign: "center",
+            }}
+          >
+            Reach the team across any dimension
           </p>
+
+          {/* Wraps to a column on narrow screens rather than squeezing. */}
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              justifyContent: "center",
+              gap: "clamp(18px, 3vw, 34px)",
+            }}
+          >
+            {[
+              {
+                id: "01",
+                name: "Kaif",
+                role: "Event Coordinator",
+                display: "93453 65508",
+                dial: "+919345365508",
+              },
+              {
+                id: "02",
+                name: "Jeroline",
+                role: "Event Coordinator",
+                display: "73583 03462",
+                dial: "+917358303462",
+              },
+            ].map((person) => (
+              <a
+                key={person.dial}
+                href={`tel:${person.dial}`}
+                style={{
+                  position: "relative",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "flex-start",
+                  gap: 8,
+                  minWidth: 230,
+                  padding: "18px 24px",
+                  border: "3px solid var(--paper-white)",
+                  boxShadow: "7px 7px 0 var(--spider-red)",
+                  background: "var(--velvet-black)",
+                  textDecoration: "none",
+                  color: "var(--paper-white)",
+                }}
+              >
+                {/* ID-card accent stripe — the "badge", not just a card */}
+                <span
+                  aria-hidden="true"
+                  style={{
+                    position: "absolute",
+                    top: -3,
+                    left: -3,
+                    right: -3,
+                    height: 5,
+                    background: "var(--glitch-cyan)",
+                  }}
+                />
+                <span
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    width: "100%",
+                    gap: 10,
+                  }}
+                >
+                  <span
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 6,
+                      fontFamily: "var(--font-mono)",
+                      fontSize: "0.62rem",
+                      letterSpacing: "0.18em",
+                      textTransform: "uppercase",
+                      color: "var(--glitch-cyan)",
+                      opacity: 0.85,
+                    }}
+                  >
+                    <SpiderTracerIcon size={12} color="var(--glitch-cyan)" />
+                    Crew ID
+                  </span>
+                  <span
+                    style={{
+                      fontFamily: "var(--font-mono)",
+                      fontSize: "0.62rem",
+                      letterSpacing: "0.14em",
+                      color: "var(--paper-white)",
+                      opacity: 0.55,
+                    }}
+                  >
+                    NO. {person.id}
+                  </span>
+                </span>
+                <span
+                  style={{
+                    fontFamily: "var(--font-display)",
+                    fontSize: "1.15rem",
+                    letterSpacing: "0.12em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {person.name}
+                </span>
+                <span
+                  style={{
+                    fontFamily: "var(--font-mono)",
+                    fontSize: "0.68rem",
+                    letterSpacing: "0.1em",
+                    textTransform: "uppercase",
+                    color: "var(--paper-white)",
+                    opacity: 0.5,
+                    marginTop: -6,
+                  }}
+                >
+                  {person.role}
+                </span>
+                <span
+                  style={{
+                    fontFamily: "var(--font-mono)",
+                    fontSize: "0.95rem",
+                    letterSpacing: "0.08em",
+                    color: "var(--glitch-cyan)",
+                  }}
+                >
+                  {person.display}
+                </span>
+              </a>
+            ))}
+          </div>
+        </section>
+
+        <footer
+          className="relative z-10 py-12 px-4 border-t border-[rgba(226,54,54,0.2)]"
+          style={{
+            background: "var(--ink-black)",
+            fontFamily: "var(--font-body)",
+            /* Centred by explicit flex rather than `text-center` +
+               `mx-auto`: those centre the TEXT inside whatever box the
+               container happens to be, which left the block sitting off to
+               the left. Laying the footer out as a centred column makes the
+               position independent of the box's width. */
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "100%",
+            textAlign: "center",
+          }}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: "56rem",
+              marginInline: "auto",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+            }}
+          >
+            <p
+              className="text-2xl mb-4"
+              style={{
+                fontFamily: "var(--font-display)",
+                color: "var(--spider-red)",
+                letterSpacing: "0.1em",
+              }}
+            >
+              XPLORE&apos;26
+            </p>
+            <p className="text-sm opacity-40">
+              © 2026 XPLORE&apos;26. All dimensions reserved.
+            </p>
+          </div>
+        </footer>
+      </div>
+
+      {/* 2. Transition Overlays (Portal & Video) */}
+      {!removeOverlay && (
+        <div 
+          ref={overlayRef}
+          className="fixed inset-0 w-full h-full flex flex-col items-center justify-center bg-black transition-opacity duration-300 z-50 select-none"
+          style={{
+            opacity: isRevealed ? 0 : 1,
+            pointerEvents: isRevealed ? "none" : "auto",
+          }}
+        >
+          {/* Preloaded video element layered directly behind/beneath the portal UI */}
+          <video
+            ref={videoRef}
+            src="/loader.mp4"
+            preload="auto"
+            muted
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover"
+            style={{
+              width: "100vw",
+              height: "100vh",
+              zIndex: 10,
+              opacity: isPlayingVideo ? 1 : 0,
+              pointerEvents: isPlayingVideo ? "auto" : "none",
+              backgroundColor: "#000000",
+            }}
+            onPlay={handleVideoPlay}
+            onTimeUpdate={handleVideoTimeUpdate}
+            onEnded={handleVideoEnded}
+          />
+
+          {/* Portal UI Controls (Centered Stack) */}
+          <div 
+            className="relative flex flex-col items-center justify-center z-20 transition-opacity duration-300"
+            style={{
+              opacity: isPlayingVideo ? 0 : 1,
+              pointerEvents: isPlayingVideo ? "none" : "auto",
+            }}
+          >
+            {!isPlayingVideo && (
+              <ComicStamp
+                text="THWIP!"
+                rotate={-11}
+                bg="var(--spider-red)"
+                shadow="var(--ink-black)"
+                style={{ top: "8%", right: "-4%", zIndex: 25 }}
+              />
+            )}
+
+            {/* Portal Wrapper (Clickable Area) */}
+            <button 
+              onClick={handleExploreClick}
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
+              className="relative w-[360px] h-[360px] md:w-[540px] md:h-[540px] flex items-center justify-center cursor-pointer outline-none border-none bg-transparent transition-transform active:scale-95"
+              aria-label="Enter portal"
+            >
+              {/* Static Portal Image (Base Layer) */}
+              <div 
+                className={`absolute inset-0 w-full h-full portal-base ${isHovered ? "hovered" : ""} ${isClicked ? "clicked" : ""}`}
+                style={{ 
+                  backgroundImage: "url('/portal.png')",
+                  backgroundSize: "contain",
+                  backgroundPosition: "center",
+                  backgroundRepeat: "no-repeat",
+                }}
+              />
+
+              {/* Glitching Overlay Layer */}
+              {isGlitching && (
+                <div 
+                  className="absolute inset-0 w-full h-full pointer-events-none"
+                  style={{
+                    backgroundImage: "url('/portal.png')",
+                    backgroundSize: "contain",
+                    backgroundPosition: "center",
+                    backgroundRepeat: "no-repeat",
+                    mixBlendMode: "screen",
+                    ...glitchStyle,
+                  }}
+                />
+              )}
+            </button>
+
+            {/* Explore 26 Button (Small gap of 12px/16px below portal button) */}
+            <div className="text-center mt-3 md:mt-4 z-30">
+              <button
+                onClick={handleExploreClick}
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
+                className={`text-glow select-none outline-none border-none bg-transparent cursor-pointer font-[var(--font-title)] text-[32px] md:text-[44px] uppercase tracking-[0.15em] ${isClicked ? "clicked scale-95" : "hover:scale-105 active:scale-95"}`}
+                style={{
+                  fontFamily: "var(--font-title)",
+                  color: "#00E5FF",
+                }}
+              >
+                Explore 26
+              </button>
+            </div>
+
+            {/* Subtitle Snugly Underneath Explore 26 (Tight 6px gap) */}
+            <div className="mt-[6px] text-center px-4 z-30">
+              <h2 
+                className="text-white text-[10px] md:text-xs tracking-[0.25em] uppercase font-light opacity-80"
+                style={{
+                  fontFamily: "var(--font-body)",
+                  fontWeight: 300,
+                }}
+              >
+                Welcome to the Licet Universe
+              </h2>
+            </div>
+          </div>
+
+          {/* Atmospheric background gradient (behind portal UI, in front of video) */}
+          {!isPlayingVideo && (
+            <>
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,10,20,0.4)_0%,rgba(0,0,0,1)_80%)] pointer-events-none z-15" />
+              <div className="absolute inset-0 halftone-bg opacity-5 pointer-events-none z-15" />
+            </>
+          )}
         </div>
-      </footer>
+      )}
     </main>
   );
 }
