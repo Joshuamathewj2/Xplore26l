@@ -10,6 +10,7 @@ import MiguelStage from "@/components/MiguelStage";
 import ComicStamp from "@/components/ComicStamp";
 import SponsorsPeekCharacter from "@/components/SponsorsPeekCharacter";
 import SpiderTracerIcon from "@/components/SpiderTracerIcon";
+import PerfHUD from "@/components/PerfHUD";
 
 export default function EntryPortal() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -186,7 +187,7 @@ export default function EntryPortal() {
   };
 
   return (
-    <main 
+    <main
       className="bg-[#0A0A0A] w-full min-h-screen relative"
       style={{
         height: isRevealed ? "auto" : "100vh",
@@ -194,6 +195,9 @@ export default function EntryPortal() {
         overflowX: "hidden",
       }}
     >
+      {/* Renders nothing unless the page is opened with ?debug=perf. */}
+      <PerfHUD />
+
       {!splashDone && <SplashScreen onComplete={() => setSplashDone(true)} />}
 
       {/* CSS Animation definitions */}

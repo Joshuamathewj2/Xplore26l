@@ -14,6 +14,7 @@ import {
 } from "@react-three/postprocessing";
 import { ToneMappingMode } from "postprocessing";
 import * as THREE from "three";
+import { perfProbe } from "@/lib/perfProbe";
 import { scrollState } from "@/lib/scrollState";
 import {
   activeBeats,
@@ -1422,6 +1423,23 @@ function CameraRig() {
   return null;
 }
 
+/* Feeds the perf probe one sample per frame. Renders nothing.
+
+   Priority is NEGATIVE so it runs ahead of the scene's own callbacks — and,
+   more importantly, so it stays out of the way: a positive priority makes R3F
+   hand rendering over to the caller, and a probe that changes how the page
+   draws is not measuring the page.
+
+   gl.info.render reports the PREVIOUS frame's draw calls, which is what we
+   want anyway: the frame whose interval we just measured. */
+function PerfSampler() {
+  const gl = useThree((s) => s.gl);
+  useFrame(() => {
+    perfProbe.frame(gl.info.render.calls, gl.info.render.triangles);
+  }, -1000);
+  return null;
+}
+
 export default function Spider3D() {
   // Memoize camera so it isn't recreated each render.
   const camera = useMemo(
@@ -1489,6 +1507,8 @@ export default function Spider3D() {
       <Suspense fallback={null}>
         <MiguelCharacter />
       </Suspense>
+
+      <PerfSampler />
 
       {/* ── POST STACK: bloom (HDR emissive only) → lens CA → filmic tone map
           → grade → vignette. Order is the order they run. ── */}
