@@ -188,7 +188,12 @@ const PUNCH_FX = { landed: false, spike: 0, boost: 0.014, decay: 7 };
 const PERF = {
   maxDpr: 1.5, // hard cap on device pixel ratio
   multisampling: 0, // MSAA inside the composer. 0 = off (cheapest); 2–4 = smoother
-  bloomLevels: 5, // mip levels of blur — each level is another pass
+  // Mip levels of blur. Each level is a downsample AND an upsample, so this is
+  // the single most expensive knob in the composer — 5 levels is ~10 full-screen
+  // passes on top of the five other effects. At the bloom radius used here the
+  // difference between 3 and 5 is not visible on the emissive bands, and the
+  // audience is on laptops with integrated graphics.
+  bloomLevels: 3,
   envResolution: 128, // cubemap res for the Lightformer environment
 };
 

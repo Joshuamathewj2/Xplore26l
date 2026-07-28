@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Html } from "@react-three/drei";
 import * as THREE from "three";
@@ -261,6 +261,28 @@ export default function EventsCarousel3D({
   const pendingRef = useRef<number | null>(null);
   const activeRef = useRef(0);
 
+  /* Drives the Canvas frameloop below. State rather than a ref because the
+     Canvas prop has to re-render to change — and it flips at most twice per
+     visit, not per frame, so the render is free.
+
+     rootMargin gives it a screen of lead-in either side: the loop is already
+     running by the time the carousel is looked at, and it does not stop the
+     instant the top edge leaves. */
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const io = new IntersectionObserver(
+      ([entry]) => setInView(entry.isIntersecting),
+      { rootMargin: "100% 0px" }
+    );
+
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
   // Read inside the pointer handler without re-creating the callback.
   const frozenRef = useRef(frozen);
   useEffect(() => {
@@ -307,8 +329,19 @@ export default function EventsCarousel3D({
         position: "relative",
       }}
     >
+      {/* frameloop is gated on visibility. This is the page's SECOND WebGL
+          context — the hero's character canvas is the first — and it used to
+          render continuously whether or not it was on screen, including while
+          the hero was doing its scroll transition directly above it. Two live
+          render loops competing for one GPU is a cost paid on every frame of
+          an animation the user is actually watching.
+
+          "never" rather than "demand": demand still renders on state change,
+          and this scene animates from a ref inside useFrame, so it would keep
+          drawing. */}
       <Canvas
         orthographic
+        frameloop={inView ? "always" : "never"}
         camera={{ position: [0, 0, 500], zoom: ZOOM, near: 0.1, far: 2000 }}
         gl={{ alpha: true, antialias: true }}
         style={{ background: "transparent" }}

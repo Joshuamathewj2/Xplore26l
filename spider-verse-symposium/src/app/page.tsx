@@ -26,6 +26,38 @@ export default function EntryPortal() {
   const [splashDone, setSplashDone] = useState(false);
   const [removeOverlay, setRemoveOverlay] = useState(false);
   const redirectTriggered = useRef(false);
+  const breakVideoRef = useRef<HTMLVideoElement>(null);
+
+  /* The ~30 MB video break loads and plays only while it is on screen.
+     It is well below the fold, so autoPlay + preload="auto" spent that
+     bandwidth — and the GPU time to decode it — during the hero's 3D warm-up,
+     which is where the scroll transition was losing frames.
+
+     rootMargin starts the fetch a little before it scrolls in, so it is
+     playing by the time it is actually looked at; pausing on the way out stops
+     it decoding behind the rest of the page. */
+  useEffect(() => {
+    const el = breakVideoRef.current;
+    if (!el) return;
+
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          void el.play().catch(() => {
+            /* Autoplay can be refused (battery saver, reduced data). The strip
+               is decorative, so a still frame is an acceptable outcome — what
+               is not acceptable is an unhandled rejection in the console. */
+          });
+        } else {
+          el.pause();
+        }
+      },
+      { rootMargin: "200px 0px" }
+    );
+
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
 
   // Randomized glitch generator for the portal UI
   useEffect(() => {
@@ -335,13 +367,21 @@ export default function EntryPortal() {
             }}
           />
 
+          {/* preload="none" + play-on-visible, NOT autoPlay + preload="auto".
+              This clip is ~30 MB and sits well below the fold, but eager
+              preload fetched all of it the moment the page opened — during
+              exactly the window the hero's 3D scene is downloading its model
+              and warming up. Video decode and WebGL contend for the same GPU,
+              so the character's scroll transition stuttered on behalf of a
+              strip nobody had scrolled to yet. Now it costs nothing until it
+              is actually on screen. */}
           <video
+            ref={breakVideoRef}
             src="/loader1.mp4"
-            autoPlay
             loop
             muted
             playsInline
-            preload="auto"
+            preload="none"
             className="w-full h-full object-cover"
             style={{
               width: "100%",
