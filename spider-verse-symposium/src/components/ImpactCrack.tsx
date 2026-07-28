@@ -181,12 +181,40 @@ export default function ImpactCrack() {
       root.style.display = "";
       fx.lifeT = 0;
     };
-    /** Writes left/top + the centring transform, composed with any shake. */
+    /* Writes left/top + the centring transform, composed with any shake.
+       Skips writes that would set the value it already holds.
+
+       This runs from its own requestAnimationFrame loop, which ticks for the
+       whole life of the page — including the long stretches where the crack is
+       display:none and the fist is not moving. Assigning an identical string to
+       .style still invalidates style for that element, so the loop was asking
+       the browser to re-resolve styles every frame alongside the WebGL canvas,
+       for a result that had not changed. The character's scroll transition was
+       sharing its frame budget with that.
+
+       Compared against the last WRITTEN value rather than reading .style back,
+       which would itself force a style recalculation. */
+    let lastLeft = "";
+    let lastTop = "";
+    let lastTransform = "";
     const place = (x: number, y: number) => {
-      svg.style.left = `${x}px`;
-      svg.style.top = `${y}px`;
-      svg.style.transform =
+      const left = `${x}px`;
+      const top = `${y}px`;
+      const transform =
         `translate(-50%, -50%) translate3d(${fx.shakeX.toFixed(2)}px, ${fx.shakeY.toFixed(2)}px, 0)`;
+
+      if (left !== lastLeft) {
+        svg.style.left = left;
+        lastLeft = left;
+      }
+      if (top !== lastTop) {
+        svg.style.top = top;
+        lastTop = top;
+      }
+      if (transform !== lastTransform) {
+        svg.style.transform = transform;
+        lastTransform = transform;
+      }
     };
     let raf = 0;
     let prev = performance.now();

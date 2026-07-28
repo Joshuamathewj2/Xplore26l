@@ -48,13 +48,22 @@ export default function ScrollRig() {
     /* ── beat anchors: scrollY at which each beat's section is centred ── */
     let anchors: number[] = [0];
 
+    /* Cached alongside the anchors, and for the same reason.
+       writeState used to compute this per scroll event:
+         document.documentElement.scrollHeight - window.innerHeight
+       scrollHeight is a layout-triggering read, so every scroll event could
+       force a synchronous reflow — on a page that has a full-screen WebGL
+       canvas and DOM overlays being restyled every frame, that reflow is not
+       cheap and it lands directly in the scroll path. The anchors were already
+       measured once and reused; this value had simply been missed. */
+    let maxScroll = 1;
+
     const measure = () => {
       const scrollY = window.scrollY;
       const vh = window.innerHeight;
-      const maxScroll = Math.max(
-        document.documentElement.scrollHeight - vh,
-        1
-      );
+      // Assigns the OUTER maxScroll (declared with the anchors), not a local:
+      // writeState reads it on every scroll event and must not re-measure.
+      maxScroll = Math.max(document.documentElement.scrollHeight - vh, 1);
 
       // Resolve selectors, keeping beat + element paired so a miss drops the
       // beat instead of renumbering the rest.
@@ -135,10 +144,6 @@ export default function ScrollRig() {
     /* ── scrollY → scrollState (progress + continuous beatPos) ── */
     let lastY = window.scrollY;
     const writeState = (y: number) => {
-      const maxScroll = Math.max(
-        document.documentElement.scrollHeight - window.innerHeight,
-        1
-      );
       scrollState.progress = Math.min(Math.max(y / maxScroll, 0), 1);
       scrollState.velocity = y - lastY;
       lastY = y;
