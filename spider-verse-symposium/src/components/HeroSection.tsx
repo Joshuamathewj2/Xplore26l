@@ -1,31 +1,111 @@
 "use client";
 
 import { useEffect, useRef, useCallback } from "react";
+import Image, { type StaticImageData } from "next/image";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
+import HeroSpiders from "./HeroSpiders";
+import licetLogo from "../../images/Logo/licet logo.png";
+import deptLogo from "../../images/Logo/Dept logo.jpeg";
 
 gsap.registerPlugin(ScrollTrigger);
 
-/* NOTE — the 3D character is NO LONGER rendered here. The Canvas lives in a
-   FIXED full-viewport layer mounted once in page.tsx (z-index 15) so it
-   persists across the whole scrollytelling page. The hero keeps its poster
-   sandwich because the solid title (z8) sits under that fixed layer and the
-   outline title (z16) sits over it. Character reactions to scroll are driven
-   by BEATS in src/lib/beats.ts, not by this component. */
-export default function HeroSection() {
+/* ── INSTITUTION MARKS ───────────────────────────────────────────────────
+   Both logos are artwork on a WHITE ground — the department mark is a JPEG,
+   so it has no transparency at all, and the LICET file is a palette PNG
+   whose artwork is dark either way. Dropped straight onto the near-black
+   hero they would read as two stray white rectangles (or, if that palette
+   does carry alpha, as dark-on-dark and effectively invisible).
+
+   So they get a PLATE: a paper-white panel with the hard border and offset
+   ink shadow used everywhere else on this page. That makes the white ground
+   deliberate — a comic panel the logo is printed in — and it renders the
+   same whether or not the source has an alpha channel.
+
+   Sized by HEIGHT with width:auto because the two marks have very different
+   aspect ratios (LICET is 176x148, near-square; EICON is portrait). Matching
+   their heights is what makes them read as a pair. Both are set with clamp()
+   so they shrink with the viewport instead of crowding the nav links. */
+function LogoPlate({
+  src,
+  alt,
+  height,
+}: {
+  src: StaticImageData;
+  alt: string;
+  height: string;
+}) {
+  return (
+    <div
+      style={{
+        background: "#F2EFE9",
+        border: "3px solid #F2EFE9",
+        boxShadow: "4px 4px 0 rgba(3, 7, 30, 0.9)",
+        padding: "4px 6px",
+        display: "flex",
+        alignItems: "center",
+        lineHeight: 0,
+        flex: "0 0 auto",
+      }}
+    >
+      <Image
+        src={src}
+        alt={alt}
+        priority
+        // Both dimensions touched (one explicit, one auto) — Next warns if
+        // CSS changes only one of them.
+        style={{ height, width: "auto" }}
+        sizes="140px"
+      />
+    </div>
+  );
+}
+
+/* A title layer, rendered as two halves clipped down the middle. Each half
+   holds the full wordmark and is clipped visually, so when both land at x=0
+   they reassemble into one seamless piece of type. Negative insets keep the
+   glow/stroke from being cut off vertically. */
+const HALF_CLIP = {
+  left: "inset(-40% 50% -40% -40%)",
+  right: "inset(-40% -40% -40% 50%)",
+} as const;
+
+export default function HeroSection({ start = true }: { start?: boolean }) {
   const sectionRef = useRef<HTMLElement>(null);
+  const imageWrapRef = useRef<HTMLDivElement>(null);
+  const ambientOrbRef = useRef<HTMLDivElement>(null);
+  const sweepRef = useRef<HTMLDivElement>(null);
   const webLeftRef = useRef<SVGSVGElement>(null);
   const webRightRef = useRef<SVGSVGElement>(null);
   const titleSolidWrapRef = useRef<HTMLDivElement>(null);
+  // Every title layer is rendered as two clipped halves so the wordmark can
+  // fly together from opposite sides. Collected as arrays so one tween drives
+  // all the left pieces and another all the right ones.
+  const leftHalves = useRef<(HTMLDivElement | null)[]>([]);
+  const rightHalves = useRef<(HTMLDivElement | null)[]>([]);
+  const entranceRef = useRef<gsap.core.Timeline | null>(null);
   const titleStrokeWrapRef = useRef<HTMLDivElement>(null);
+  const taglineCtaRef = useRef<HTMLDivElement>(null);
   const chromRedRef = useRef<HTMLDivElement>(null);
   const chromCyanRef = useRef<HTMLDivElement>(null);
   const bottomCardsRef = useRef<HTMLDivElement>(null);
   const cornerTopRef = useRef<HTMLDivElement>(null);
   const cornerBottomRef = useRef<HTMLDivElement>(null);
+  const particleRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   // Track whether reduced-motion is preferred
   const prefersReducedMotion = useRef(false);
+
+  const particles = [
+    { left: "10%", top: "22%", size: 6, opacity: 0.45, driftX: 14, driftY: -18, delay: 0 },
+    { left: "22%", top: "68%", size: 4, opacity: 0.35, driftX: -18, driftY: -14, delay: 0.3 },
+    { left: "34%", top: "16%", size: 5, opacity: 0.4, driftX: 18, driftY: 16, delay: 0.6 },
+    { left: "49%", top: "12%", size: 7, opacity: 0.28, driftX: -10, driftY: 22, delay: 0.9 },
+    { left: "61%", top: "24%", size: 4, opacity: 0.36, driftX: 20, driftY: -12, delay: 0.2 },
+    { left: "73%", top: "58%", size: 6, opacity: 0.33, driftX: -16, driftY: 18, delay: 0.5 },
+    { left: "84%", top: "18%", size: 4, opacity: 0.42, driftX: 12, driftY: 24, delay: 0.8 },
+    { left: "90%", top: "72%", size: 5, opacity: 0.3, driftX: -14, driftY: -20, delay: 1.1 },
+  ];
 
   // gsap.quickTo setters for smooth parallax — initialized in useEffect
   const parallaxSetters = useRef<{
@@ -56,9 +136,6 @@ export default function HeroSection() {
     const ny = (e.clientY - rect.top - rect.height / 2) / (rect.height / 2);
 
     const s = parallaxSetters.current;
-
-    // (The 3D character's own cursor glance lives inside Spider3D — the old
-    // ±10px DOM parallax on its wrapper went away with the fixed canvas.)
 
     // Title containers — opposite direction, smaller (±4px)
     s.titleSolidX?.(nx * 4);
@@ -101,6 +178,10 @@ export default function HeroSection() {
         parallaxSetters.current.titleStrokeX = gsap.quickTo(titleStrokeWrapRef.current, "x", { duration: dur, ease });
         parallaxSetters.current.titleStrokeY = gsap.quickTo(titleStrokeWrapRef.current, "y", { duration: dur, ease });
       }
+        if (ambientOrbRef.current) {
+          gsap.quickTo(ambientOrbRef.current, "x", { duration: dur, ease });
+          gsap.quickTo(ambientOrbRef.current, "y", { duration: dur, ease });
+        }
       if (webLeftRef.current) {
         parallaxSetters.current.webLX = gsap.quickTo(webLeftRef.current, "x", { duration: dur, ease });
         parallaxSetters.current.webLY = gsap.quickTo(webLeftRef.current, "y", { duration: dur, ease });
@@ -121,8 +202,10 @@ export default function HeroSection() {
     const webR = webRightRef.current;
     const titleSolid = titleSolidWrapRef.current;
     const titleStroke = titleStrokeWrapRef.current;
+    const taglineCta = taglineCtaRef.current;
     const chromRed = chromRedRef.current;
     const chromCyan = chromCyanRef.current;
+    const character = imageWrapRef.current;
     const bottomCards = bottomCardsRef.current;
     const cornerTop = cornerTopRef.current;
     const cornerBot = cornerBottomRef.current;
@@ -159,13 +242,17 @@ export default function HeroSection() {
       });
       if (titleSolid) gsap.set(titleSolid, { opacity: 0 });
       if (titleStroke) gsap.set(titleStroke, { opacity: 0 });
+      if (character) gsap.set(character, { opacity: 0 });
       if (bottomCards) gsap.set(bottomCards, { opacity: 0 });
       if (cornerTop) gsap.set(cornerTop, { opacity: 0 });
       if (cornerBot) gsap.set(cornerBot, { opacity: 0 });
+      if (taglineCta) gsap.set(taglineCta, { opacity: 0 });
 
       simpleFade
-        .to([webL, webR, titleSolid, titleStroke].filter(Boolean), {
+        .to([webL, webR, titleSolid, titleStroke, character].filter(Boolean), {
           opacity: (i, target) => {
+            // Character keeps its original 0.88 opacity
+            if (target === character) return 0.88;
             if (target === webL) return 0.4;
             if (target === webR) return 0.35;
             return 1;
@@ -174,8 +261,8 @@ export default function HeroSection() {
           ease: "power1.out",
         })
         .to(
-          [bottomCards, cornerTop, cornerBot].filter(Boolean),
-          { opacity: (i, target) => (target === bottomCards ? 1 : 0.5), duration: 0.6 },
+          [taglineCta, bottomCards, cornerTop, cornerBot].filter(Boolean),
+          { opacity: (i, target) => (target === bottomCards ? 1 : target === taglineCta ? 1 : 0.5), duration: 0.6 },
           "-=0.4"
         );
 
@@ -193,15 +280,49 @@ export default function HeroSection() {
     if (webR) gsap.set(webR, { opacity: 0 });
     webLLines.forEach(prepareStroke);
     webRLines.forEach(prepareStroke);
-    if (titleSolid) gsap.set(titleSolid, { opacity: 0, scale: 0.92 });
-    if (titleStroke) gsap.set(titleStroke, { opacity: 0, scale: 0.92 });
+    // Layer wrappers just fade; the split halves carry the movement.
+    if (titleSolid) gsap.set(titleSolid, { opacity: 0 });
+    if (titleStroke) gsap.set(titleStroke, { opacity: 0 });
     if (chromRed) gsap.set(chromRed, { opacity: 0 });
     if (chromCyan) gsap.set(chromCyan, { opacity: 0 });
+    if (taglineCta) gsap.set(taglineCta, { opacity: 0, y: 18 });
+
+    // Halves start off-screen on their own side, so the wordmark arrives as
+    // two pieces converging rather than one block sliding.
+    const lefts = leftHalves.current.filter(Boolean) as HTMLDivElement[];
+    const rights = rightHalves.current.filter(Boolean) as HTMLDivElement[];
+    const travel = Math.max(window.innerWidth * 0.55, 520);
+    if (lefts.length) gsap.set(lefts, { x: -travel });
+    if (rights.length) gsap.set(rights, { x: travel });
+
+    // Character enters on a real 3D push: rotated off-axis and set back in Z
+    // behind the title, then swinging square to camera as it comes forward.
+    if (character)
+      gsap.set(character, {
+        xPercent: -50,
+        opacity: 0,
+        transformPerspective: 1100,
+        transformOrigin: "50% 65%",
+        z: -520,
+        rotationY: 16,
+        rotationX: 5,
+        scale: 1.14,
+        y: 40,
+      });
+    if (ambientOrbRef.current) gsap.set(ambientOrbRef.current, { opacity: 0, scale: 0.7 });
+    if (sweepRef.current) gsap.set(sweepRef.current, { opacity: 0, x: -220, rotate: -14 });
+    particleRefs.current.forEach((particle) => {
+      if (particle) gsap.set(particle, { opacity: 0, scale: 0 });
+    });
     if (bottomCards) gsap.set(bottomCards, { opacity: 0, y: 20 });
     if (cornerTop) gsap.set(cornerTop, { opacity: 0, y: -15 });
     if (cornerBot) gsap.set(cornerBot, { opacity: 0, y: 15 });
 
-    const entrance = gsap.timeline({ delay: 0.1 });
+    // Built paused: the pre-state above is applied immediately so nothing
+    // flashes un-animated while the splash is still covering the screen, but
+    // the sequence itself only plays once `start` flips true.
+    const entrance = gsap.timeline({ paused: true, delay: 0.1 });
+    entranceRef.current = entrance;
 
     // Step 1: Web SVGs — fade in + stroke-dashoffset draw (~0.8s)
     entrance.to(webL, { opacity: 0.4, duration: 0.3, ease: "power2.out" }, 0);
@@ -223,22 +344,82 @@ export default function HeroSection() {
       }, 0.1);
     }
 
-    // Step 2: Title — fade + scale from 0.92 → 1 (starts at t=0.3)
+    // Step 2: Title — layers become visible, then the halves fly together.
     entrance.to(
       [titleSolid, titleStroke].filter(Boolean),
-      { opacity: 1, scale: 1, duration: 0.7, ease: "power3.out", stagger: 0.05 },
+      { opacity: 1, duration: 0.25, ease: "none" },
       0.3
     );
+    if (lefts.length) {
+      entrance.to(
+        lefts,
+        { x: 0, duration: 1.15, ease: "power4.out" },
+        0.3
+      );
+    }
+    if (rights.length) {
+      entrance.to(
+        rights,
+        { x: 0, duration: 1.15, ease: "power4.out" },
+        0.3
+      );
+    }
 
     // Step 2b: Chromatic layers — fade in after title starts
     entrance.to(
       [chromRed, chromCyan].filter(Boolean),
-      { opacity: 0.35, duration: 0.5, ease: "power2.out" },
+      { opacity: 0.35, duration: 0.6, ease: "power2.out" },
       0.6
     );
 
-    // (Step 3 — character entrance — now lives on the fixed canvas layer in
-    // page.tsx: a CSS fade-in on the wrapper, timed to land with the title.)
+    // Step 3: Character — translateY from +40 to 0 while fading in (starts at t=0.55)
+    entrance.to(character, {
+      opacity: 0.88,
+      z: 0,
+      rotationY: 0,
+      rotationX: 0,
+      scale: 1,
+      y: 0,
+      duration: 1.5,
+      ease: "power3.out",
+    }, 0.55);
+
+    if (ambientOrbRef.current) {
+      entrance.to(ambientOrbRef.current, {
+        opacity: 1,
+        scale: 1,
+        duration: 1,
+        ease: "power2.out",
+      }, 0.2);
+    }
+
+    if (sweepRef.current) {
+      entrance.to(sweepRef.current, {
+        opacity: 1,
+        x: 220,
+        duration: 1.8,
+        ease: "power3.out",
+      }, 0.75);
+    }
+
+    particleRefs.current.forEach((particle, index) => {
+      if (!particle) return;
+      entrance.to(particle, {
+        opacity: particles[index].opacity,
+        scale: 1,
+        duration: 0.5,
+        ease: "power2.out",
+      }, 0.55 + index * 0.04);
+    });
+
+    // Step 3b: Tagline + CTA — settles just under the title
+    if (taglineCta) {
+      entrance.to(
+        taglineCta,
+        { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" },
+        0.85
+      );
+    }
 
     // Step 4: Bottom info cards + corner lines — fade/slide in last, staggered
     entrance.to(
@@ -268,9 +449,62 @@ export default function HeroSection() {
       chromBreathing.fromTo(chromCyan, { x: 1.5 }, { x: 3, duration: 2.2, ease: "sine.inOut" }, 0);
     }
 
-    // (The old DOM idle bob is gone — the 3D character breathes/sways
-    // procedurally inside Spider3D, which reads scroll from scrollState.)
+    const titleFloat = gsap.timeline({ repeat: -1, yoyo: true, defaults: { ease: "sine.inOut" } });
+    if (titleSolid) {
+      titleFloat.to(titleSolid, { y: -10, duration: 2.6 }, 0);
+    }
+    if (titleStroke) {
+      titleFloat.to(titleStroke, { y: -10, duration: 2.6 }, 0);
+    }
 
+    const characterFloat = gsap.to(imageWrapRef.current, {
+      y: -16,
+      scale: 1.03,
+      duration: 3.2,
+      ease: "sine.inOut",
+      repeat: -1,
+      yoyo: true,
+      delay: 1.8,
+    });
+
+    const orbFloat = gsap.to(ambientOrbRef.current, {
+      x: 28,
+      y: -18,
+      scale: 1.08,
+      duration: 4.2,
+      ease: "sine.inOut",
+      repeat: -1,
+      yoyo: true,
+    });
+
+    const sweepLoop = gsap.to(sweepRef.current, {
+      x: 260,
+      opacity: 0.35,
+      duration: 5.5,
+      ease: "sine.inOut",
+      repeat: -1,
+      yoyo: true,
+    });
+
+    const particleLoops = particleRefs.current
+      .map((particle, index) => {
+        if (!particle) return null;
+        const particleData = particles[index];
+        return gsap.to(particle, {
+          x: particleData.driftX,
+          y: particleData.driftY,
+          duration: 3.5 + index * 0.35,
+          ease: "sine.inOut",
+          repeat: -1,
+          yoyo: true,
+          delay: particleData.delay,
+        });
+      })
+      .filter(Boolean) as gsap.core.Tween[];
+
+    // ──────────────────────────────────────────────
+    //  4. IDLE AMBIENT MOTION — slow vertical bob
+    // ──────────────────────────────────────────────
     // ──────────────────────────────────────────────
     //  5. SCROLL-TRIGGERED EXIT
     // ──────────────────────────────────────────────
@@ -283,12 +517,16 @@ export default function HeroSection() {
       },
     });
 
-    // Title fades + scales down. The 3D character does NOT fade here — it
-    // persists on the fixed layer and travels to the next beat instead.
+    // Title & character fade + scale down
     exitTl
       .to(
         [titleSolid, titleStroke].filter(Boolean),
         { opacity: 0, scale: 0.96, duration: 1, ease: "none" },
+        0
+      )
+      .to(
+        character,
+        { opacity: 0, scale: 0.97, duration: 1, ease: "none" },
         0
       )
       // Intensify web-line pulse (boost opacity of the energy pulse <g> elements)
@@ -302,12 +540,9 @@ export default function HeroSection() {
         { opacity: 0.7, duration: 0.4, ease: "none" },
         0
       )
-      // Then fade the hero's remaining dressing out. IMPORTANT: never animate
-      // opacity on `section` itself — opacity<1 creates a stacking context,
-      // which would collapse the z8/z16 title sandwich around the fixed
-      // z15 canvas and pop the outline title behind the character mid-fade.
+      // Then fade entire hero out
       .to(
-        [webL, webR, bottomCards, cornerTop, cornerBot].filter(Boolean),
+        section,
         { opacity: 0, duration: 0.6, ease: "none" },
         0.5
       );
@@ -318,19 +553,32 @@ export default function HeroSection() {
     return () => {
       entrance.kill();
       chromBreathing.kill();
-      // Kill ONLY our own trigger — a global getAll().kill() would also tear
-      // down ScrollRig's reveal triggers on HMR.
-      exitTl.scrollTrigger?.kill();
+      titleFloat.kill();
+      characterFloat.kill();
+      orbFloat.kill();
+      sweepLoop.kill();
+      particleLoops.forEach((loop) => loop.kill());
       exitTl.kill();
+      ScrollTrigger.getAll().forEach((st) => st.kill());
       window.removeEventListener("mousemove", handleMouseMove);
       mq.removeEventListener("change", onMotionChange);
     };
   }, [handleMouseMove]);
 
+  /* ──────────────────────────────────────────────
+     Hold the entrance until the splash hands over.
+     The timeline is built paused, so the hero sits
+     in its pre-state behind the splash and only
+     animates once the reveal is done.
+     ────────────────────────────────────────────── */
+  useEffect(() => {
+    if (start) entranceRef.current?.play();
+  }, [start]);
+
   // ── Shared title text styles ──
   const titleFontStyle: React.CSSProperties = {
-    fontFamily: "'Bebas Neue', 'Anton', sans-serif",
-    fontSize: "clamp(8rem, 18vw, 18rem)",
+    fontFamily: "var(--font-title)",
+    fontSize: "clamp(3.2rem, 16vw, 18rem)",
     lineHeight: 1,
     letterSpacing: "0.06em",
     textTransform: "uppercase",
@@ -350,6 +598,17 @@ export default function HeroSection() {
     willChange: "transform, opacity",
   };
 
+  // Each half fills its layer and centres the same full wordmark; the clip is
+  // what makes it a half, so both pieces stay in perfect register at rest.
+  const titleHalfStyle: React.CSSProperties = {
+    position: "absolute",
+    inset: 0,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    willChange: "transform, opacity",
+  };
+
   return (
     <>
       {/* ── Site-wide red border frame ── */}
@@ -366,8 +625,7 @@ export default function HeroSection() {
       <section
         ref={sectionRef}
         id="hero"
-        data-beat="hero"
-        style={{
+                style={{
           position: "relative",
           width: "100%",
           height: "100vh",
@@ -376,10 +634,103 @@ export default function HeroSection() {
           background: "#0A0A0A",
         }}
       >
+        <div
+          ref={ambientOrbRef}
+          className="hero-ambient-orb"
+          style={{
+            position: "absolute",
+            top: "18%",
+            left: "50%",
+            width: "42vw",
+            height: "42vw",
+            maxWidth: 760,
+            maxHeight: 760,
+            transform: "translate(-50%, -50%)",
+            borderRadius: "50%",
+            background:
+              "radial-gradient(circle, rgba(0,229,255,0.18) 0%, rgba(226,54,54,0.12) 35%, rgba(10,10,10,0) 70%)",
+            filter: "blur(40px)",
+            zIndex: 1,
+            pointerEvents: "none",
+            mixBlendMode: "screen",
+            opacity: 0,
+          }}
+        />
+
+        {/* ── Background video layer ── */}
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          aria-hidden="true"
+          tabIndex={-1}
+          className="hero-video-motion"
+          src="/360p-watermark.mp4"
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            objectPosition: "center center",
+            opacity: 0.30,
+            filter: "grayscale(0.15) brightness(0.78) contrast(1.08) saturate(0.9)",
+            zIndex: 1,
+            pointerEvents: "none",
+            mixBlendMode: "normal",
+          }}
+        />
+
+        {/* ── Animated sweep light ── */}
+        <div
+          ref={sweepRef}
+                    style={{
+            position: "absolute",
+            top: "8%",
+            left: "-20%",
+            width: "35vw",
+            height: "84vh",
+            background:
+              "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.05) 46%, rgba(0,229,255,0.08) 50%, rgba(255,255,255,0.04) 54%, transparent 100%)",
+            filter: "blur(18px)",
+            zIndex: 4,
+            pointerEvents: "none",
+            opacity: 0,
+            mixBlendMode: "screen",
+          }}
+        />
+
+        {/* ── Floating particles ── */}
+        {particles.map((particle, index) => (
+          <div
+            key={index}
+            ref={(node) => {
+              particleRefs.current[index] = node;
+            }}
+                        style={{
+              position: "absolute",
+              left: particle.left,
+              top: particle.top,
+              width: particle.size,
+              height: particle.size,
+              borderRadius: "50%",
+              background: index % 2 === 0 ? "rgba(0,229,255,0.85)" : "rgba(226,54,54,0.9)",
+              boxShadow: index % 2 === 0
+                ? "0 0 18px rgba(0,229,255,0.5)"
+                : "0 0 18px rgba(226,54,54,0.45)",
+              zIndex: 6,
+              pointerEvents: "none",
+              opacity: 0,
+            }}
+          />
+        ))}
+
         {/* ── Web pattern SVG — LEFT ── */}
         <svg
           ref={webLeftRef}
-          style={{
+                    style={{
             position: "absolute",
             top: 0,
             left: 0,
@@ -459,7 +810,7 @@ export default function HeroSection() {
         {/* ── Mirrored Right Corner Energy Web ── */}
         <svg
           ref={webRightRef}
-          style={{
+                    style={{
             position: "absolute",
             top: 0,
             right: 0,
@@ -517,19 +868,28 @@ export default function HeroSection() {
           style={{
             ...titleWrapStyle,
             zIndex: 7,
-            opacity: 0,
           }}
         >
-          <h1
-            aria-hidden="true"
-            style={{
-              ...titleFontStyle,
-              color: "#E23636",
-              transform: "translateX(-1.5px)",
-            }}
+          <div
+            ref={(n) => { leftHalves.current[0] = n; }}
+            style={{ ...titleHalfStyle, clipPath: HALF_CLIP.left }}
           >
-            XPLORE&apos;26
-          </h1>
+            <h1 style={{ ...titleFontStyle,
+                color: "#E23636",
+                transform: "translateX(-1.5px)", }} aria-hidden="true">
+              XPLORE&apos;26
+            </h1>
+          </div>
+          <div
+            ref={(n) => { rightHalves.current[0] = n; }}
+            style={{ ...titleHalfStyle, clipPath: HALF_CLIP.right }}
+          >
+            <h1 style={{ ...titleFontStyle,
+                color: "#E23636",
+                transform: "translateX(-1.5px)", }} aria-hidden="true">
+              XPLORE&apos;26
+            </h1>
+          </div>
         </div>
 
         {/* ── CHROMATIC CYAN LAYER (behind solid title) ── */}
@@ -538,19 +898,28 @@ export default function HeroSection() {
           style={{
             ...titleWrapStyle,
             zIndex: 7,
-            opacity: 0,
           }}
         >
-          <h1
-            aria-hidden="true"
-            style={{
-              ...titleFontStyle,
-              color: "#00E5FF",
-              transform: "translateX(1.5px)",
-            }}
+          <div
+            ref={(n) => { leftHalves.current[1] = n; }}
+            style={{ ...titleHalfStyle, clipPath: HALF_CLIP.left }}
           >
-            XPLORE&apos;26
-          </h1>
+            <h1 style={{ ...titleFontStyle,
+                color: "#00E5FF",
+                transform: "translateX(1.5px)", }} aria-hidden="true">
+              XPLORE&apos;26
+            </h1>
+          </div>
+          <div
+            ref={(n) => { rightHalves.current[1] = n; }}
+            style={{ ...titleHalfStyle, clipPath: HALF_CLIP.right }}
+          >
+            <h1 style={{ ...titleFontStyle,
+                color: "#00E5FF",
+                transform: "translateX(1.5px)", }} aria-hidden="true">
+              XPLORE&apos;26
+            </h1>
+          </div>
         </div>
 
         {/* ── Title text — z-index 8, BEHIND character (solid fill) ── */}
@@ -561,21 +930,60 @@ export default function HeroSection() {
             zIndex: 8,
           }}
         >
-          <h1
-            style={{
-              ...titleFontStyle,
-              color: "#F2EFE9",
-              textShadow: "0 4px 40px rgba(0,0,0,0.8), 0 2px 8px rgba(0,0,0,0.9)",
-            }}
+          <div
+            ref={(n) => { leftHalves.current[2] = n; }}
+            style={{ ...titleHalfStyle, clipPath: HALF_CLIP.left }}
           >
-            XPLORE&apos;26
-          </h1>
+            <h1 className="hero-title-solid" style={{ ...titleFontStyle,
+                color: "#F2EFE9",
+                textShadow:
+                  "0 4px 40px rgba(0,0,0,0.8), 0 2px 8px rgba(0,0,0,0.9), 0 0 90px rgba(226,54,54,0.3)", }}>
+              XPLORE&apos;26
+            </h1>
+          </div>
+          <div
+            ref={(n) => { rightHalves.current[2] = n; }}
+            style={{ ...titleHalfStyle, clipPath: HALF_CLIP.right }}
+          >
+            <h1 className="hero-title-solid" style={{ ...titleFontStyle,
+                color: "#F2EFE9",
+                textShadow:
+                  "0 4px 40px rgba(0,0,0,0.8), 0 2px 8px rgba(0,0,0,0.9), 0 0 90px rgba(226,54,54,0.3)", }} aria-hidden="true">
+              XPLORE&apos;26
+            </h1>
+          </div>
         </div>
 
-        {/* ── Character — the FIXED 3D canvas layer (page.tsx, z-index 15)
-             passes between the solid title (z8, behind him) and the outline
-             title below (z16, in front) — same poster sandwich as before,
-             but the canvas itself lives outside this section and persists. ── */}
+        {/* ── Character slot — z-index 15, ABOVE title ──
+            The flat spiderman-hero.webp that used to live here has been
+            replaced by the rigged Miguel O'Hara model. He is NOT rendered
+            inside this section: he lives in one persistent fixed canvas
+            (see MiguelStage) that every section scrolls past, so he can
+            travel from here into the events deck and on to the punch
+            without remounting — and so this section's `overflow: hidden`
+            never clips him.
+
+            The wrapper below is intentionally kept and left empty. The
+            entrance / float / scroll-exit timelines above still target
+            `imageWrapRef`, and gutting it would mean rewriting three
+            unrelated GSAP timelines. The canvas sits at this exact z15
+            slot instead, so the title sandwich (solid z8 behind, outline
+            z16 in front) reads exactly as it did with the PNG. ── */}
+        <div
+          ref={imageWrapRef}
+          style={{
+            position: "absolute",
+            bottom: 0,
+            left: "50%",
+            transform: "translateX(-50%)",
+            width: "min(1400px, 125vw)",
+            height: "130vh",
+            zIndex: 15,
+            opacity: 0.88,
+            willChange: "transform, opacity",
+            pointerEvents: "none",
+          }}
+        />
 
         {/* ── Title text — z-index 16, ABOVE character (outlined/stroke only) ── */}
         <div
@@ -585,17 +993,32 @@ export default function HeroSection() {
             zIndex: 16,
           }}
         >
-          <h1
-            style={{
-              ...titleFontStyle,
-              color: "transparent",
-              WebkitTextStroke: "3px #F2EFE9",
-              textShadow: "none",
-            }}
+          <div
+            ref={(n) => { leftHalves.current[3] = n; }}
+            style={{ ...titleHalfStyle, clipPath: HALF_CLIP.left }}
           >
-            XPLORE&apos;26
-          </h1>
+            <h1 className="hero-title-stroke" style={{ ...titleFontStyle,
+                color: "transparent",
+                WebkitTextStroke: "3px #F2EFE9",
+                textShadow: "0 0 50px rgba(0,229,255,0.35)", }} aria-hidden="true">
+              XPLORE&apos;26
+            </h1>
+          </div>
+          <div
+            ref={(n) => { rightHalves.current[3] = n; }}
+            style={{ ...titleHalfStyle, clipPath: HALF_CLIP.right }}
+          >
+            <h1 className="hero-title-stroke" style={{ ...titleFontStyle,
+                color: "transparent",
+                WebkitTextStroke: "3px #F2EFE9",
+                textShadow: "0 0 50px rgba(0,229,255,0.35)", }} aria-hidden="true">
+              XPLORE&apos;26
+            </h1>
+          </div>
         </div>
+
+        {/* ── Live spiders: drop in on silk, dangle, climb back out ── */}
+        <HeroSpiders active={start} />
 
         {/* ── Vignette overlay ── */}
         <div
@@ -611,7 +1034,7 @@ export default function HeroSection() {
 
         {/* ── Top nav ── */}
         <nav
-          style={{
+                    style={{
             position: "absolute",
             top: 0,
             left: 0,
@@ -620,9 +1043,21 @@ export default function HeroSection() {
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            padding: "20px 40px",
+            // Horizontal padding shrinks with the viewport: the bar now
+            // carries two logo plates as well as the links, so a fixed 40px
+            // gutter is what would push them into each other on a laptop.
+            padding: "20px clamp(14px, 3vw, 40px)",
+            gap: 16,
           }}
         >
+          {/* ── LEFT CORNER: the college mark, then the site's own spider ── */}
+          <div style={{ display: "flex", alignItems: "center", gap: "clamp(10px, 1.6vw, 18px)" }}>
+            <LogoPlate
+              src={licetLogo}
+              alt="Loyola-ICAM College of Engineering and Technology"
+              height="clamp(32px, 4vw, 48px)"
+            />
+
           {/* Spider logo */}
           <svg width="28" height="28" viewBox="0 0 100 100" fill="#F2EFE9">
             <ellipse cx="50" cy="56" rx="12" ry="18" />
@@ -638,60 +1073,49 @@ export default function HeroSection() {
               strokeLinecap="round"
             />
           </svg>
+          </div>
 
-          {/* Menu button */}
-          <button
-            id="nav-menu"
+          {/* ── RIGHT CORNER: the links, then the department mark ── */}
+          <div
             style={{
               display: "flex",
               alignItems: "center",
-              gap: 12,
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              padding: 0,
+              gap: "clamp(14px, 2.2vw, 26px)",
             }}
           >
-            <span
-              style={{
-                fontFamily: "'Anton', sans-serif",
-                fontSize: 14,
-                letterSpacing: "0.2em",
-                textTransform: "uppercase",
-                color: "#E23636",
-              }}
-            >
-              Menu
-            </span>
-            <div
-              style={{ display: "flex", flexDirection: "column", gap: 5 }}
-            >
-              <span
+          {/* Nav links */}
+          <div style={{ display: "flex", alignItems: "center", gap: "clamp(16px, 2.4vw, 32px)" }}>
+            {[
+              { label: "Events", href: "#events" },
+              { label: "Sponsors", href: "#sponsors" },
+            ].map((link) => (
+              <a
+                key={link.href}
+                href={link.href}
+                className="hero-nav-link"
                 style={{
-                  display: "block",
-                  width: 24,
-                  height: 2,
-                  background: "#F2EFE9",
+                  fontFamily: "var(--font-display)",
+                  fontSize: 13,
+                  letterSpacing: "0.18em",
+                  textTransform: "uppercase",
+                  color: "#F2EFE9",
+                  textDecoration: "none",
                 }}
-              />
-              <span
-                style={{
-                  display: "block",
-                  width: 32,
-                  height: 2,
-                  background: "#F2EFE9",
-                }}
-              />
-              <span
-                style={{
-                  display: "block",
-                  width: 20,
-                  height: 2,
-                  background: "#F2EFE9",
-                }}
-              />
-            </div>
-          </button>
+              >
+                {link.label}
+              </a>
+            ))}
+          </div>
+
+            {/* Taller than the college mark on purpose: this one is portrait,
+                so matching their HEIGHTS exactly would leave it a narrow
+                sliver beside a near-square badge. */}
+            <LogoPlate
+              src={deptLogo}
+              alt="EICON — Engineers Integrated for Computing Needs"
+              height="clamp(38px, 4.8vw, 56px)"
+            />
+          </div>
         </nav>
 
         {/* ── Bottom scrim ── */}
@@ -709,10 +1133,14 @@ export default function HeroSection() {
           }}
         />
 
-        {/* ── Bottom info cards ── */}
+        {/* ── Bottom info cards ──
+            `hero-bottom-cards` is a hook for the phone block in globals.css,
+            which hides these: at 390px they collapse into two unreadable
+            155px columns either side of the character. */}
         <div
           ref={bottomCardsRef}
-          style={{
+          className="hero-bottom-cards"
+                    style={{
             position: "absolute",
             bottom: 0,
             left: 0,
@@ -745,7 +1173,7 @@ export default function HeroSection() {
               />
               <h3
                 style={{
-                  fontFamily: "'Anton', sans-serif",
+                  fontFamily: "var(--font-display)",
                   fontSize: 13,
                   letterSpacing: "0.18em",
                   textTransform: "uppercase",
@@ -784,7 +1212,7 @@ export default function HeroSection() {
             >
               <h3
                 style={{
-                  fontFamily: "'Anton', sans-serif",
+                  fontFamily: "var(--font-display)",
                   fontSize: 13,
                   letterSpacing: "0.18em",
                   textTransform: "uppercase",
@@ -824,7 +1252,7 @@ export default function HeroSection() {
         {/* ── Red accent corner lines ── */}
         <div
           ref={cornerTopRef}
-          style={{
+                    style={{
             position: "absolute",
             top: 72,
             left: 48,
@@ -838,7 +1266,7 @@ export default function HeroSection() {
         />
         <div
           ref={cornerBottomRef}
-          style={{
+                    style={{
             position: "absolute",
             bottom: 80,
             right: 48,
@@ -877,6 +1305,64 @@ export default function HeroSection() {
               stroke-dashoffset: 0;
               opacity: 0.15;
             }
+          }
+          .hero-cta-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0.85rem 2.1rem;
+            font-family: var(--font-body);
+            font-weight: 600;
+            font-size: 0.9rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #0A0A0A;
+            background: #F2EFE9;
+            border: 3px solid #0A0A0A;
+            border-radius: 2px;
+            cursor: pointer;
+            text-decoration: none;
+            box-shadow: 4px 4px 0 #E23636;
+            transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, color 0.15s ease;
+          }
+          .hero-cta-btn:hover {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0 #E23636;
+            background: #E23636;
+            color: #F2EFE9;
+          }
+          .hero-cta-btn:active {
+            transform: translate(4px, 4px);
+            box-shadow: 0 0 0 #E23636;
+          }
+          .hero-cta-btn span {
+            transition: transform 0.15s ease;
+          }
+          .hero-cta-btn:hover span {
+            transform: translateX(3px);
+          }
+          .hero-nav-link {
+            position: relative;
+            padding-bottom: 4px;
+          }
+          .hero-nav-link::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 100%;
+            height: 2px;
+            background: #E23636;
+            transform: scaleX(0);
+            transform-origin: right;
+            transition: transform 0.25s ease;
+          }
+          .hero-nav-link:hover {
+            color: #E23636;
+          }
+          .hero-nav-link:hover::after {
+            transform: scaleX(1);
+            transform-origin: left;
           }
         `}</style>
       </section>

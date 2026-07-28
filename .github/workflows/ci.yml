@@ -29,7 +29,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
           cache-dependency-path: spider-verse-symposium/package-lock.json
 

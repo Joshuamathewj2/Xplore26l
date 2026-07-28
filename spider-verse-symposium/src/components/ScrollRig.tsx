@@ -1,29 +1,39 @@
 "use client";
 
 /* ════════════════════════════════════════════════════════════
-   SCROLL RIG — Lenis smooth scroll + the scroll→beat mapping.
+   SCROLL RIG — the scroll→beat mapping that drives Miguel.
 
    Renders nothing. Responsibilities:
-   1. Instantiate Lenis (wheel-smoothing only; touch stays native so mobile
-      scrolling is never hijacked) and drive it from GSAP's ticker so Lenis,
-      ScrollTrigger and the R3F frame loop all share one clock.
-   2. Measure a scroll "anchor" for every `[data-beat]` section — the scrollY
-      at which that section's centre sits at the viewport's centre — and on
-      every scroll convert scrollY into a continuous beat position
-      (0 → N−1), written into the module-level `scrollState`. That store is
-      what the 3D reads in useFrame; no React state is touched per frame.
-   3. `prefers-reduced-motion`: skip Lenis entirely (native scrolling) and
-      flag the store so the 3D snaps between beats instead of gliding.
-   4. Small scroll-triggered reveals for any `[data-reveal]` content.
+   1. Resolve every BEATS entry's `selector` against the DOM and measure a
+      scroll "anchor" for it — the scrollY at which that section's centre
+      sits at the viewport's centre. Beats whose selector doesn't resolve
+      are dropped from `activeBeats` rather than silently shifting the
+      indices of every later beat.
+   2. On every scroll, convert scrollY into a continuous beat position
+      (0 → N−1) and write it into the module-level `scrollState`. That store
+      is what the 3D reads in useFrame; no React state is touched per frame.
+   3. `prefers-reduced-motion`: flag the store so the 3D snaps between beats
+      instead of gliding.
+
+   DELIBERATELY NOT USED HERE:
+   • Lenis — this page scrolls natively and adding smooth-scroll would
+     change the feel of every existing section, not just the 3D.
+   • GSAP ScrollTrigger — HeroSection's cleanup calls
+     `ScrollTrigger.getAll().forEach(st => st.kill())`, which would tear down
+     any trigger this file created. A plain passive scroll listener is
+     immune to that, and the beat damping in Spider3D already does the
+     smoothing a scrub would have provided.
    ════════════════════════════════════════════════════════════ */
 
 import { useEffect } from "react";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-import Lenis from "@studio-freight/lenis";
 import { scrollState } from "@/lib/scrollState";
-
-gsap.registerPlugin(ScrollTrigger);
+import {
+  BEATS,
+  activeBeats,
+  forViewport,
+  MOBILE_BREAKPOINT,
+  type Beat,
+} from "@/lib/beats";
 
 export default function ScrollRig() {
   useEffect(() => {
@@ -35,32 +45,92 @@ export default function ScrollRig() {
     };
     mq.addEventListener("change", onMotionChange);
 
-    /* ── beat anchors: scrollY at which each [data-beat] section is centred ── */
+    /* ── beat anchors: scrollY at which each beat's section is centred ── */
     let anchors: number[] = [0];
+
     const measure = () => {
-      const sections = Array.from(
-        document.querySelectorAll<HTMLElement>("[data-beat]")
-      );
-      scrollState.beatCount = Math.max(sections.length, 1);
       const scrollY = window.scrollY;
       const vh = window.innerHeight;
       const maxScroll = Math.max(
         document.documentElement.scrollHeight - vh,
         1
       );
-      anchors = sections.map((el) => {
+
+      // Resolve selectors, keeping beat + element paired so a miss drops the
+      // beat instead of renumbering the rest.
+      const found: { beat: Beat; anchor: number }[] = [];
+      const missing: string[] = [];
+      for (const beat of BEATS) {
+        const el = document.querySelector<HTMLElement>(beat.selector);
+        if (!el) {
+          missing.push(`${beat.id} ("${beat.selector}")`);
+          continue;
+        }
         const r = el.getBoundingClientRect();
         const centerY = r.top + scrollY + r.height / 2; // doc-space centre
         // scrollY that puts the section centre at the viewport centre,
         // clamped to what's actually reachable.
-        return Math.min(Math.max(centerY - vh / 2, 0), maxScroll);
-      });
-      // Guarantee strictly increasing anchors (degenerate layouts) so the
-      // segment lerp below never divides by zero.
+        found.push({
+          beat,
+          anchor: Math.min(Math.max(centerY - vh / 2, 0), maxScroll),
+        });
+      }
+
+      if (missing.length) {
+        console.warn(
+          `[ScrollRig] beat section(s) not found, dropped: ${missing.join(", ")}`
+        );
+      }
+
+      /* Phone or laptop? Resolved HERE, on every measure, so rotating the
+         device or dragging a window across the breakpoint re-picks the beat
+         set instead of keeping whichever one the page loaded at. */
+      // `<`, matching FeaturedEventsSection's own check exactly — at 768px
+      // the deck and the rig must not disagree about which layout is live.
+      const isMobile = window.innerWidth < MOBILE_BREAKPOINT;
+
+      // Nothing resolved (shouldn't happen) — keep the full list so the 3D
+      // still renders at beat 0 rather than crashing on an empty array.
+      if (!found.length) {
+        activeBeats.list = forViewport(BEATS, isMobile);
+        anchors = [0];
+        scrollState.beatCount = 1;
+        return;
+      }
+
+      activeBeats.list = forViewport(
+        found.map((f) => f.beat),
+        isMobile
+      );
+      anchors = found.map((f) => f.anchor);
+      scrollState.beatCount = anchors.length;
+
+      // Guarantee strictly increasing anchors so the segment lerp below can
+      // never divide by zero. Sections near the page bottom all clamp to
+      // maxScroll, which is exactly the degenerate case this handles.
       for (let i = 1; i < anchors.length; i++) {
         if (anchors[i] <= anchors[i - 1]) anchors[i] = anchors[i - 1] + 1;
       }
     };
+
+    /* ── BEAT HOLD BAND ────────────────────────────────────────────────
+       Fraction of each anchor-to-anchor gap where the beat HOLDS at its
+       integer instead of interpolating: the first `HOLD` of the gap stays on
+       beat i, the last `HOLD` is already on beat i+1, and the transition
+       happens across the middle.
+
+       Without this the mapping is a pure linear ramp, so a beat is only ever
+       fully "on" at one exact scroll position. That is what put the hero
+       character half-way into the arms-folded pose while the hero section
+       was still the thing filling the screen — #hero anchors at scrollY 0
+       and #events at 100vh, so scrolling 50vh (hero still on screen) already
+       meant beatPos 0.5. Scrolling back up landed mid-ramp and he never
+       returned to his opening stance.
+
+       0.3 keeps the top ~30% of each gap on the pose the section was
+       designed around, which is what makes each section read as having a
+       pose rather than being a point you pass through. */
+    const HOLD = 0.3;
 
     /* ── scrollY → scrollState (progress + continuous beatPos) ── */
     let lastY = window.scrollY;
@@ -86,82 +156,50 @@ export default function ScrollRig() {
         let i = 0;
         while (i < n - 2 && y >= anchors[i + 1]) i++;
         const f = (y - anchors[i]) / (anchors[i + 1] - anchors[i]);
-        scrollState.beatPos = i + f;
+        // Squeeze the 0→1 travel into the middle of the gap, holding the beat
+        // at each end (see HOLD). clamp keeps the ends exactly integral, which
+        // is what lets "at the hero" mean armPose 0 and nothing blended in.
+        const t = Math.min(Math.max((f - HOLD) / (1 - 2 * HOLD), 0), 1);
+        scrollState.beatPos = i + t;
       }
     };
 
     measure();
     writeState(window.scrollY);
 
-    /* ── Lenis (full-motion path only) ── */
-    let lenis: Lenis | null = null;
-    let tickerFn: ((time: number) => void) | null = null;
-    const onNativeScroll = () => writeState(window.scrollY);
+    const onScroll = () => writeState(window.scrollY);
+    window.addEventListener("scroll", onScroll, { passive: true });
 
-    if (!mq.matches) {
-      lenis = new Lenis({
-        duration: 1.1, // glide length; raise for floatier, lower for snappier
-        easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-        smoothWheel: true,
-        syncTouch: false, // touch stays native — never hijack mobile scroll
-        wheelMultiplier: 1,
-        touchMultiplier: 1.5,
-      });
-      lenis.on("scroll", (l: { scroll: number }) => {
-        writeState(l.scroll);
-        ScrollTrigger.update();
-      });
-      // One clock for everything: GSAP's ticker drives Lenis' raf.
-      tickerFn = (time: number) => lenis?.raf(time * 1000);
-      gsap.ticker.add(tickerFn);
-      gsap.ticker.lagSmoothing(0);
-    } else {
-      // Reduced motion: plain native scroll feeds the same store.
-      window.addEventListener("scroll", onNativeScroll, { passive: true });
-    }
-
-    /* ── re-measure anchors on layout changes ── */
+    /* ── re-measure on layout changes ──
+       This page starts locked at 100vh behind the portal overlay and only
+       grows to its full height once the user enters, so the very first
+       measurement is guaranteed to be wrong. A ResizeObserver on the
+       document element catches that reveal (and any later reflow) without
+       needing to know anything about the portal's state machine. */
     const onResize = () => {
       measure();
       writeState(window.scrollY);
     };
     window.addEventListener("resize", onResize);
     window.addEventListener("load", onResize);
-    // Fonts/images settling after hydration can shift section heights.
-    const settleTimer = window.setTimeout(onResize, 600);
 
-    /* ── content reveals: any [data-reveal] rises+fades in as it enters ── */
-    const reveals: ScrollTrigger[] = [];
-    if (!mq.matches) {
-      document.querySelectorAll<HTMLElement>("[data-reveal]").forEach((el) => {
-        const tween = gsap.fromTo(
-          el,
-          { opacity: 0, y: 36 },
-          {
-            opacity: 1,
-            y: 0,
-            duration: 0.8,
-            ease: "power3.out",
-            scrollTrigger: {
-              trigger: el,
-              start: "top 85%",
-              toggleActions: "play none none reverse",
-            },
-          }
-        );
-        if (tween.scrollTrigger) reveals.push(tween.scrollTrigger);
-      });
-    }
+    const ro = new ResizeObserver(onResize);
+    ro.observe(document.documentElement);
+
+    // Fonts, images and the events carousel settling after hydration can
+    // still shift section heights after the observer's first callback.
+    const settleTimers = [
+      window.setTimeout(onResize, 300),
+      window.setTimeout(onResize, 1200),
+    ];
 
     return () => {
       mq.removeEventListener("change", onMotionChange);
+      window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onResize);
       window.removeEventListener("load", onResize);
-      window.removeEventListener("scroll", onNativeScroll);
-      window.clearTimeout(settleTimer);
-      if (tickerFn) gsap.ticker.remove(tickerFn);
-      lenis?.destroy();
-      reveals.forEach((st) => st.kill());
+      ro.disconnect();
+      settleTimers.forEach((t) => window.clearTimeout(t));
     };
   }, []);
 

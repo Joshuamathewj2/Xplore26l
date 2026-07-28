@@ -18,8 +18,24 @@
   --web-blue-dark: #062654;
 
   /* Typography */
-  --font-display: 'Anton', sans-serif;
-  --font-body: 'Inter', sans-serif;
+  --font-display: var(--font-anton), sans-serif;
+  --font-title: var(--font-bebas-neue), var(--font-anton), sans-serif;
+  --font-body: var(--font-inter), sans-serif;
+
+  /* Comic / neo-brutalist set (Events section) */
+  --font-comic: var(--font-bangers), var(--font-anton), cursive;
+  --font-brutal: var(--font-archivo-black), var(--font-anton), sans-serif;
+  --font-mono: var(--font-space-mono), ui-monospace, monospace;
+
+  /* Events palette — single red accent, fuchsia as the glitch highlight */
+  --main-red: #E20B17;
+  --hot-fuchsia: #FF1973;
+  --velvet-black: #03071E;
+
+  /* Brutalist primitives — hard edges, zero blur */
+  --brutal-border: 4px;
+  --brutal-shadow: 10px 10px 0;
+  --brutal-shadow-sm: 5px 5px 0;
 
   /* Spacing */
   --section-padding: clamp(3rem, 8vw, 8rem);
@@ -34,8 +50,12 @@
   --color-web-blue-light: #1565C0;
   --color-web-blue-dark: #062654;
   --color-spider-red-dark: #B82020;
-  --font-display: 'Anton', sans-serif;
-  --font-body: 'Inter', sans-serif;
+  --font-display: var(--font-anton), sans-serif;
+  --font-title: var(--font-bebas-neue), var(--font-anton), sans-serif;
+  --font-body: var(--font-inter), sans-serif;
+  --font-comic: var(--font-bangers), var(--font-anton), cursive;
+  --font-brutal: var(--font-archivo-black), var(--font-anton), sans-serif;
+  --font-mono: var(--font-space-mono), ui-monospace, monospace;
 }
 
 /* ═══════════════════════════════════════════════════
@@ -108,12 +128,6 @@ body {
   opacity: 0.06;
 }
 
-.halftone-bg-dense {
-  background-image: radial-gradient(circle, var(--paper-white) 1px, transparent 1px);
-  background-size: 5px 5px;
-  opacity: 0.08;
-}
-
 /* ═══════════════════════════════════════════════════
    CHROMATIC ABERRATION
    ═══════════════════════════════════════════════════ */
@@ -138,342 +152,268 @@ body {
   animation: chromatic-breathe 4s ease-in-out infinite;
 }
 
-/* Stronger chromatic for glitch moments */
-@keyframes chromatic-glitch {
-  0% {
-    text-shadow:
-      -3px 0 0 rgba(226, 54, 54, 0.8),
-      3px 0 0 rgba(0, 229, 255, 0.8);
-  }
-
-  25% {
-    text-shadow:
-      3px 0 0 rgba(226, 54, 54, 0.8),
-      -3px 0 0 rgba(0, 229, 255, 0.8);
-  }
-
-  50% {
-    text-shadow:
-      -1px 2px 0 rgba(226, 54, 54, 0.8),
-      1px -2px 0 rgba(0, 229, 255, 0.8);
-  }
-
-  75% {
-    text-shadow:
-      2px 1px 0 rgba(226, 54, 54, 0.8),
-      -2px -1px 0 rgba(0, 229, 255, 0.8);
-  }
-
-  100% {
-    text-shadow:
-      -3px 0 0 rgba(226, 54, 54, 0.8),
-      3px 0 0 rgba(0, 229, 255, 0.8);
-  }
-}
-
 /* ═══════════════════════════════════════════════════
-   GLITCH EFFECTS
+   NEO-BRUTALIST COMIC (Events section)
    ═══════════════════════════════════════════════════ */
 
-@keyframes glitch-skew {
-
-  0%,
-  100% {
-    transform: skew(0deg);
-  }
-
-  20% {
-    transform: skew(-2deg);
-  }
-
-  40% {
-    transform: skew(1.5deg);
-  }
-
-  60% {
-    transform: skew(-1deg);
-  }
-
-  80% {
-    transform: skew(0.5deg);
-  }
+/* Ben-Day dot screen, the signature comic print texture. */
+.benday {
+  background-image: radial-gradient(var(--benday-color, rgba(242, 239, 233, 0.5)) 1.4px, transparent 1.5px);
+  background-size: 6px 6px;
 }
 
-@keyframes glitch-flicker {
-
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  10% {
-    opacity: 0.8;
-  }
-
-  20% {
-    opacity: 1;
-  }
-
-  30% {
-    opacity: 0.6;
-  }
-
-  40% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0.9;
-  }
-
-  60% {
-    opacity: 1;
-  }
-
-  70% {
-    opacity: 0.7;
-  }
-
-  80% {
-    opacity: 1;
-  }
-
-  90% {
-    opacity: 0.85;
-  }
+.benday-lg {
+  background-image: radial-gradient(var(--benday-color, rgba(242, 239, 233, 0.5)) 2px, transparent 2.2px);
+  background-size: 10px 10px;
 }
 
-@keyframes scan-line {
-  0% {
-    transform: translateY(-100%);
-  }
+/* ── Live events backdrop ──
+   Four stacked layers that keep the panel moving without softening it:
+   a crawling Ben-Day screen, a sliding speed-line field, a slow ink sweep,
+   and rising hard-edged shards. Everything animates background-position,
+   transform or opacity only, so the whole stack stays on the compositor
+   and never triggers layout. Every loop is a whole tile period, so there
+   is no snap at the wrap. */
 
-  100% {
-    transform: translateY(100vh);
-  }
-}
-
-/* ═══════════════════════════════════════════════════
-   LOADING SCREEN STYLES
-   ═══════════════════════════════════════════════════ */
-
-.loading-screen {
-  position: fixed;
+.events-bg {
+  position: absolute;
   inset: 0;
-  z-index: 10000;
-  background: var(--ink-black);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   overflow: hidden;
-}
-
-.loading-crack {
-  position: absolute;
-  width: 100%;
-  height: 3px;
-  top: 50%;
-  left: 0;
-  transform: translateY(-50%) scaleX(0);
-  background: var(--paper-white);
-  box-shadow:
-    -3px 0 0 var(--spider-red),
-    3px 0 0 var(--glitch-cyan);
-  z-index: 2;
-}
-
-.loading-tear {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  clip-path: polygon(50% 50%, 50% 50%, 50% 50%, 50% 50%);
-}
-
-.loading-noise {
-  position: absolute;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='6' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-  opacity: 0.08;
-  z-index: 3;
   pointer-events: none;
 }
 
-.loading-web-cracks {
+/* Layer 1 — the signature halftone, drifting diagonally.
+   60px is a multiple of the 6px tile, so the loop is seamless. */
+.events-bg__dots {
   position: absolute;
   inset: 0;
-  z-index: 4;
-  pointer-events: none;
+  background-image: radial-gradient(rgba(242, 239, 233, 0.16) 1.4px, transparent 1.5px);
+  background-size: 6px 6px;
+  animation: events-dots-crawl 22s linear infinite;
 }
 
-/* ═══════════════════════════════════════════════════
-   COMIC PANEL BUTTON
-   ═══════════════════════════════════════════════════ */
-
-.comic-btn {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1rem 2.5rem;
-  font-family: var(--font-display);
-  font-size: 1.25rem;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--paper-white);
-  background: var(--spider-red);
-  border: 4px solid var(--ink-black);
-  cursor: pointer;
-  transition: all 0.15s ease;
-  box-shadow: 5px 5px 0 var(--ink-black);
-  text-decoration: none;
-  overflow: hidden;
+@keyframes events-dots-crawl {
+  to {
+    background-position: 60px 60px;
+  }
 }
 
-.comic-btn::before {
-  content: '';
+/* Layer 2 — comic speed lines. Hard stops, no gradient ramp.
+   The tile repeats every 90px along a 60deg normal, so translating by
+   (90·sin60, -90·cos60) lands exactly one tile on. */
+.events-bg__speed {
   position: absolute;
-  inset: 0;
-  background-image: radial-gradient(circle, rgba(0, 0, 0, 0.15) 1px, transparent 1px);
-  background-size: 4px 4px;
-  opacity: 0.5;
-  transition: opacity 0.2s;
+  inset: -40%;
+  background-image: repeating-linear-gradient(60deg,
+      transparent 0 44px,
+      rgba(242, 239, 233, 0.05) 44px 46px,
+      transparent 46px 66px,
+      rgba(226, 11, 23, 0.07) 66px 67px,
+      transparent 67px 90px);
+  animation: events-speed-slide 11s linear infinite;
 }
 
-.comic-btn:hover {
-  transform: translate(3px, 3px);
-  box-shadow: 2px 2px 0 var(--ink-black);
-  background: var(--ink-black);
-  color: var(--spider-red);
-  border-color: var(--spider-red);
+@keyframes events-speed-slide {
+  to {
+    transform: translate(77.94px, -45px);
+  }
 }
 
-.comic-btn:hover::before {
-  opacity: 0;
+/* Layer 3 — a wide ink sweep raking across the panel, the "live" tell. */
+.events-bg__sweep {
+  position: absolute;
+  top: -30%;
+  bottom: -30%;
+  left: -40%;
+  width: 22%;
+  background: linear-gradient(90deg,
+      transparent,
+      rgba(242, 239, 233, 0.045) 45%,
+      rgba(255, 25, 115, 0.05) 55%,
+      transparent);
+  transform: skewX(-14deg);
+  animation: events-sweep 9s ease-in-out infinite;
 }
 
-.comic-btn:active {
-  transform: translate(5px, 5px);
-  box-shadow: 0 0 0 var(--ink-black);
-}
-
-/* ═══════════════════════════════════════════════════
-   SCROLL CUE
-   ═══════════════════════════════════════════════════ */
-
-@keyframes thwip-bounce {
+@keyframes events-sweep {
 
   0%,
+  8% {
+    transform: translateX(0) skewX(-14deg);
+  }
+
+  92%,
   100% {
-    transform: translateX(-50%) translateY(0);
-  }
-
-  50% {
-    transform: translateX(-50%) translateY(10px);
+    transform: translateX(560%) skewX(-14deg);
   }
 }
 
-@keyframes web-extend {
-  0% {
-    height: 0;
-  }
-
-  100% {
-    height: 40px;
-  }
-}
-
-.scroll-cue {
-  animation: thwip-bounce 2s ease-in-out infinite;
-}
-
-/* ═══════════════════════════════════════════════════
-   SPIDER SWING
-   ═══════════════════════════════════════════════════ */
-
-@keyframes spider-swing {
-  0% {
-    transform: translateX(-120%) rotate(-15deg);
-  }
-
-  50% {
-    transform: translateX(0%) rotate(5deg);
-  }
-
-  100% {
-    transform: translateX(120%) rotate(-5deg);
-  }
-}
-
-/* ═══════════════════════════════════════════════════
-   HERO SECTION
-   ═══════════════════════════════════════════════════ */
-
-.hero-section {
-  position: relative;
-  width: 100%;
-  height: 100vh;
-  min-height: 600px;
-  overflow: hidden;
-  background: linear-gradient(180deg,
-      var(--web-blue-dark) 0%,
-      var(--web-blue) 30%,
-      var(--ink-black) 100%);
-}
-
-.parallax-layer {
+/* Layer 4 — hard-edged shards rising off the bottom rule. Outlines, not
+   fills, so they read as printed panel scraps rather than glowing motes. */
+.events-bg__shards span {
   position: absolute;
-  inset: 0;
-  will-change: transform;
+  bottom: -60px;
+  display: block;
+  border-style: solid;
+  border-width: 3px;
+  animation: events-shard-drift linear infinite;
 }
 
-/* ═══════════════════════════════════════════════════
-   AMBIENT PARTICLES
-   ═══════════════════════════════════════════════════ */
-
-@keyframes float-particle {
-
-  0%,
-  100% {
-    transform: translate(0, 0);
+@keyframes events-shard-drift {
+  0% {
+    transform: translateY(0) rotate(0deg);
     opacity: 0;
   }
 
   10% {
-    opacity: 0.3;
+    opacity: 1;
   }
 
-  90% {
-    opacity: 0.3;
+  85% {
+    opacity: 1;
   }
 
-  50% {
-    transform: translate(var(--drift-x, 50px), var(--drift-y, -100px));
-    opacity: 0.5;
+  100% {
+    transform: translateY(-118vh) rotate(210deg);
+    opacity: 0;
   }
 }
 
-.particle {
-  position: absolute;
-  border-radius: 50%;
-  background: var(--paper-white);
-  pointer-events: none;
+.events-bg__shards span:nth-child(1) {
+  left: 6%;
+  width: 26px;
+  height: 26px;
+  border-color: rgba(226, 11, 23, 0.6);
+  animation-duration: 19s;
+  animation-delay: -2s;
 }
 
-/* ═══════════════════════════════════════════════════
-   RESPONSIVE OVERRIDES
-   ═══════════════════════════════════════════════════ */
+.events-bg__shards span:nth-child(2) {
+  left: 21%;
+  width: 14px;
+  height: 14px;
+  border-color: rgba(242, 239, 233, 0.4);
+  animation-duration: 25s;
+  animation-delay: -11s;
+}
 
-@media (max-width: 768px) {
-  .comic-btn {
-    padding: 0.75rem 1.75rem;
-    font-size: 1rem;
-    box-shadow: 3px 3px 0 var(--ink-black);
+.events-bg__shards span:nth-child(3) {
+  left: 38%;
+  width: 34px;
+  height: 34px;
+  border-color: rgba(255, 25, 115, 0.5);
+  animation-duration: 31s;
+  animation-delay: -6s;
+}
+
+.events-bg__shards span:nth-child(4) {
+  left: 57%;
+  width: 18px;
+  height: 18px;
+  border-color: rgba(242, 239, 233, 0.34);
+  animation-duration: 22s;
+  animation-delay: -17s;
+}
+
+.events-bg__shards span:nth-child(5) {
+  left: 74%;
+  width: 30px;
+  height: 30px;
+  border-color: rgba(226, 11, 23, 0.5);
+  animation-duration: 27s;
+  animation-delay: -9s;
+}
+
+.events-bg__shards span:nth-child(6) {
+  left: 89%;
+  width: 16px;
+  height: 16px;
+  border-color: rgba(255, 25, 115, 0.55);
+  animation-duration: 17s;
+  animation-delay: -14s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .events-bg__dots,
+  .events-bg__speed,
+  .events-bg__sweep,
+  .events-bg__shards span {
+    animation: none;
   }
 
-  .comic-btn:hover {
-    transform: translate(2px, 2px);
-    box-shadow: 1px 1px 0 var(--ink-black);
+  .events-bg__sweep,
+  .events-bg__shards {
+    display: none;
   }
+}
+
+/* Hard-edged comic button: thick rule, solid offset, physical press. */
+.brutal-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid var(--ink-black);
+  border-radius: 0;
+  font-family: var(--font-brutal);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  box-shadow: var(--brutal-shadow-sm) var(--ink-black);
+  transition: transform 0.08s steps(2, end), box-shadow 0.08s steps(2, end);
+}
+
+.brutal-btn:hover:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: 3px 3px 0 var(--ink-black);
+}
+
+.brutal-btn:active:not(:disabled) {
+  transform: translate(5px, 5px);
+  box-shadow: 0 0 0 var(--ink-black);
+}
+
+.brutal-btn:disabled {
+  cursor: default;
+}
+
+/* Chunky outlined comic lettering. */
+.comic-title {
+  font-family: var(--font-comic);
+  text-transform: uppercase;
+  -webkit-text-stroke: 2px var(--ink-black);
+  paint-order: stroke fill;
+}
+
+/* Square nav control with a hard shadow. */
+.brutal-nav {
+  width: 46px;
+  height: 46px;
+  border: 3px solid var(--paper-white);
+  border-radius: 0;
+  background: var(--velvet-black);
+  color: var(--paper-white);
+  font-family: var(--font-brutal);
+  font-size: 18px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--brutal-shadow-sm) var(--main-red);
+  transition: transform 0.08s steps(2, end), box-shadow 0.08s steps(2, end);
+}
+
+.brutal-nav:hover:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: 3px 3px 0 var(--hot-fuchsia);
+}
+
+.brutal-nav:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  box-shadow: 3px 3px 0 rgba(242, 239, 233, 0.2);
 }
 
 /* ═══════════════════════════════════════════════════
@@ -501,20 +441,80 @@ body {
    HERO ENTRANCE ANIMATIONS
    ═══════════════════════════════════════════════════ */
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
+@keyframes hero-title-shift {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+    text-shadow: 0 4px 40px rgba(0, 0, 0, 0.8), 0 2px 8px rgba(0, 0, 0, 0.9);
   }
 
-  to {
+  50% {
+    transform: translateY(-8px) scale(1.01);
+    text-shadow: 0 10px 44px rgba(0, 229, 255, 0.08), 0 2px 8px rgba(0, 0, 0, 0.9);
+  }
+}
+
+@keyframes hero-stroke-breathe {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 0.95;
+  }
+
+  50% {
+    transform: translateY(7px) scale(1.02);
     opacity: 1;
   }
 }
 
-@keyframes fadeInDown {
+@keyframes hero-character-float {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+    filter: contrast(1.1) brightness(1.02) saturate(1);
+  }
+
+  50% {
+    transform: translateY(-14px) scale(1.03);
+    filter: contrast(1.12) brightness(1.08) saturate(1.05);
+  }
+}
+
+@keyframes hero-video-drift {
+  0%,
+  100% {
+    transform: scale(1.03) translate3d(0, 0, 0);
+    opacity: 0.3;
+  }
+
+  50% {
+    transform: scale(1.08) translate3d(-1.5%, -1%, 0);
+    opacity: 0.36;
+  }
+}
+
+.hero-title-solid {
+  animation: hero-title-shift 6s ease-in-out infinite;
+}
+
+.hero-title-stroke {
+  animation: hero-stroke-breathe 5.2s ease-in-out infinite;
+}
+
+.hero-character-image {
+  animation: hero-character-float 6.5s ease-in-out infinite;
+  will-change: transform, filter;
+}
+
+.hero-video-motion {
+  animation: hero-video-drift 18s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes hero-load-fade-up {
   from {
     opacity: 0;
-    transform: translateY(-20px);
+    transform: translateY(28px);
   }
 
   to {
@@ -523,60 +523,469 @@ body {
   }
 }
 
-@keyframes fadeInUp {
+@keyframes hero-load-scale-in {
   from {
     opacity: 0;
-    transform: translateY(30px);
+    transform: translate3d(0, 34px, 0) scale(0.92);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translate3d(0, 0, 0) scale(1);
   }
 }
 
-@keyframes scaleIn {
+@keyframes hero-load-video-in {
   from {
     opacity: 0;
     transform: scale(1.1);
   }
 
   to {
-    opacity: 1;
+    opacity: 0.3;
+    transform: scale(1.03);
+  }
+}
+
+@keyframes hero-load-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.9);
+  }
+
+  50% {
+    opacity: 0.85;
     transform: scale(1);
   }
 }
 
-@keyframes glitchIn {
+.hero-load {
+  animation: hero-load-fade-up 1s ease-out both;
+}
+
+.hero-web-enter {
+  opacity: 0;
+  animation: hero-load-fade-up 0.9s ease-out 0.15s both;
+}
+
+.hero-video-enter {
+  animation: hero-load-video-in 1.3s ease-out both, hero-video-drift 18s ease-in-out 1.3s infinite;
+}
+
+.hero-ambient-orb {
+  animation: hero-load-scale-in 1.2s ease-out 0.2s both;
+}
+
+.hero-sweep-enter {
+  animation: hero-load-fade-up 1s ease-out 0.45s both;
+}
+
+.hero-particle-enter {
+  animation: hero-load-pulse 1.4s ease-out 0.6s both;
+}
+
+.hero-chromatic-enter {
+  animation: hero-load-fade-up 0.8s ease-out 0.55s both;
+}
+
+.hero-title-enter {
+  animation: hero-load-scale-in 1s cubic-bezier(0.16, 1, 0.3, 1) 0.35s both;
+}
+
+.hero-image-enter {
+  animation: hero-load-scale-in 1.35s cubic-bezier(0.16, 1, 0.3, 1) 0.55s both;
+}
+
+.hero-nav-enter {
+  animation: hero-load-fade-up 0.85s ease-out 0.25s both;
+}
+
+.hero-bottom-enter {
+  animation: hero-load-fade-up 1s ease-out 0.9s both;
+}
+
+.hero-corner-enter {
+  animation: hero-load-fade-up 0.9s ease-out 1s both;
+}
+
+/* ═══════════════════════════════════════════════════
+   EVENTS HEADING + CARD ANIMATIONS
+
+   Everything here animates transform / opacity / background-position
+   only, so the whole events panel stays on the compositor. The idle
+   loops live on INNER elements: GSAP owns the transform of the outer
+   wrappers for the scroll entrance, and the two would clobber each
+   other on a shared node.
+   ═══════════════════════════════════════════════════ */
+
+/* ── Heading plate ──
+   A printed panel never sits perfectly still on the page. The sway is a
+   half-degree either side of its resting -1.2deg, and the hard shadow
+   travels with it so the offset always reads as cast, not painted on.
+   Stepped, because a smooth ramp turns comic ink into motion blur. */
+@keyframes events-heading-sway {
+  0%,
+  100% {
+    transform: rotate(-1.2deg) translate(0, 0);
+    box-shadow: 12px 12px 0 var(--main-red), 12px 12px 0 5px var(--paper-white);
+  }
+
+  50% {
+    transform: rotate(-0.5deg) translate(-2px, -2px);
+    box-shadow: 15px 15px 0 var(--main-red), 15px 15px 0 5px var(--paper-white);
+  }
+}
+
+.events-heading {
+  animation: events-heading-sway 7s steps(12, end) infinite;
+  will-change: transform;
+}
+
+/* The artwork itself gets a slow chromatic breath — a hair of scale plus a
+   red/cyan drop-shadow split, the print-misregistration look. drop-shadow
+   is used rather than text-shadow because this is a transparent PNG. */
+@keyframes events-heading-print {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(-1px 0 0 rgba(226, 11, 23, 0.35)) drop-shadow(1px 0 0 rgba(0, 229, 255, 0.3));
+  }
+
+  50% {
+    transform: scale(1.02);
+    filter: drop-shadow(-3px 0 0 rgba(226, 11, 23, 0.5)) drop-shadow(3px 0 0 rgba(0, 229, 255, 0.45));
+  }
+}
+
+.events-heading__art {
+  animation: events-heading-print 4.5s ease-in-out infinite;
+  transform-origin: center center;
+}
+
+/* Ink sweep raking across the heading plate, on the same 7s beat as the
+   sway. Clipped by the plate's own overflow. */
+@keyframes events-heading-glint {
+  0%,
+  62% {
+    transform: translateX(-140%) skewX(-18deg);
+  }
+
+  86%,
+  100% {
+    transform: translateX(420%) skewX(-18deg);
+  }
+}
+
+.events-heading__glint {
+  position: absolute;
+  top: -20%;
+  bottom: -20%;
+  left: 0;
+  width: 26%;
+  pointer-events: none;
+  background: linear-gradient(90deg,
+      transparent,
+      rgba(226, 11, 23, 0.22) 45%,
+      rgba(255, 25, 115, 0.22) 55%,
+      transparent);
+  animation: events-heading-glint 7s ease-in-out infinite;
+}
+
+/* Subtitle tag — hard two-step jog, like a stamped caption settling. */
+@keyframes events-sub-jog {
+  0%,
+  100% {
+    transform: rotate(0.8deg) translate(0, 0);
+  }
+
+  50% {
+    transform: rotate(-0.9deg) translate(2px, -1px);
+  }
+}
+
+.events-sub {
+  animation: events-sub-jog 5.5s steps(8, end) infinite;
+}
+
+/* ── Event cards ──
+   The card's hard shadow is driven off custom properties so the hover
+   rule can grow it: an inline box-shadow would win over any class. */
+.event-card {
+  box-shadow:
+    10px 10px 0 var(--card-accent),
+    10px 10px 0 4px var(--card-paper);
+  transition:
+    transform 0.12s steps(3, end),
+    box-shadow 0.12s steps(3, end);
+}
+
+/* Lift toward the reader on hover; the shadow lengthens to match, which is
+   what sells the card as a physical thing sitting on the panel. Only the
+   centred card is hoverable — the deck sets pointer-events:none on the
+   rest — so this never fires on a blurred neighbour. */
+.event-card:hover {
+  transform: translate(-5px, -5px);
+  box-shadow:
+    18px 18px 0 var(--card-accent),
+    18px 18px 0 4px var(--card-paper);
+}
+
+/* Art cell: a slow push-in that speeds up under the cursor. The wrapper
+   carries the transform so the <Image> keeps its own mirror flip. */
+@keyframes event-card-art-drift {
+  0%,
+  100% {
+    transform: scale(1.02) translate(0, 0);
+  }
+
+  50% {
+    transform: scale(1.06) translate(-1.5%, -1%);
+  }
+}
+
+.event-card__art {
+  position: absolute;
+  inset: 0;
+  animation: event-card-art-drift 12s ease-in-out infinite;
+  transition: transform 0.3s ease-out;
+  will-change: transform;
+}
+
+/* `animation: none`, not `animation-play-state: paused` — a paused
+   animation still wins the cascade over this rule's transform, so pausing
+   would leave the push-in stuck wherever the loop happened to be. */
+.event-card:hover .event-card__art {
+  animation: none;
+  transform: scale(1.1);
+}
+
+/* Speed lines: they slide in from the corner and flicker, so the card
+   always looks like it was caught mid-swing. */
+@keyframes event-card-speed {
+  0%,
+  100% {
+    transform: translate(0, 0);
+    opacity: 0.35;
+  }
+
+  50% {
+    transform: translate(9px, -5px);
+    opacity: 0.7;
+  }
+}
+
+.event-card__speed {
+  animation: event-card-speed 3.4s steps(6, end) infinite;
+}
+
+/* Ben-Day screen crawls diagonally. 40px is a multiple of the 10px tile,
+   so the loop is seamless. */
+@keyframes event-card-benday {
+  to {
+    background-position: 40px 40px;
+  }
+}
+
+.event-card__benday {
+  animation: event-card-benday 18s linear infinite;
+}
+
+/* Caption box rocks on its corner, and snaps upright under the cursor. */
+@keyframes event-card-title-rock {
+  0%,
+  100% {
+    transform: rotate(-1.4deg);
+  }
+
+  50% {
+    transform: rotate(-2.6deg) translate(2px, -2px);
+  }
+}
+
+.event-card__title {
+  animation: event-card-title-rock 6s steps(8, end) infinite;
+  transition: transform 0.12s steps(3, end);
+}
+
+.event-card:hover .event-card__title {
+  animation: none;
+  transform: rotate(0.6deg) translate(4px, -4px) scale(1.04);
+}
+
+/* Site mark ticks over on a long beat — a small sign of life in the
+   header strip that costs nothing to paint. */
+@keyframes event-card-mask-tick {
+  0%,
+  88%,
+  100% {
+    transform: rotate(0deg) scale(1);
+  }
+
+  92% {
+    transform: rotate(-14deg) scale(1.18);
+  }
+
+  96% {
+    transform: rotate(9deg) scale(1.08);
+  }
+}
+
+.event-card__mask {
+  animation: event-card-mask-tick 6.5s steps(4, end) infinite;
+}
+
+/* Glint raking over the centred card only, so the deck reads as lit from
+   one side and the active card is obvious without a highlight ring. */
+@keyframes event-card-glint {
+  0%,
+  55% {
+    transform: translateX(-160%) skewX(-16deg);
+    opacity: 0;
+  }
+
+  60% {
+    opacity: 1;
+  }
+
+  95% {
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateX(460%) skewX(-16deg);
+    opacity: 0;
+  }
+}
+
+.event-card__glint {
+  position: absolute;
+  top: -10%;
+  bottom: -10%;
+  left: 0;
+  width: 22%;
+  z-index: 5;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(90deg,
+      transparent,
+      rgba(242, 239, 233, 0.14) 45%,
+      rgba(242, 239, 233, 0.2) 55%,
+      transparent);
+}
+
+.event-card--active .event-card__glint {
+  animation: event-card-glint 5.5s ease-in-out 1.2s infinite;
+}
+
+/* Entrance for the mobile card list — GSAP drives the desktop deck as one
+   stage, but the stacked list wants each card slamming in on its own. */
+@keyframes event-card-slam {
   0% {
     opacity: 0;
-    transform: translateY(40px) skewX(-5deg);
+    transform: translate(0, 46px) scale(0.9) rotate(-3deg);
   }
 
-  33% {
-    opacity: 0.7;
-    transform: translateY(15px) skewX(3deg);
-  }
-
-  66% {
-    opacity: 0.9;
-    transform: translateY(-5px) skewX(-1deg);
+  70% {
+    opacity: 1;
+    transform: translate(0, -6px) scale(1.02) rotate(0.8deg);
   }
 
   100% {
     opacity: 1;
-    transform: translateY(0) skewX(0deg);
+    transform: translate(0, 0) scale(1) rotate(0deg);
   }
 }
 
-@keyframes slideInLeft {
-  from {
-    opacity: 0;
-    transform: translateX(-30px);
+.event-card-enter {
+  animation: event-card-slam 0.55s steps(9, end) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .events-heading,
+  .events-heading__art,
+  .events-heading__glint,
+  .events-sub,
+  .event-card__art,
+  .event-card__speed,
+  .event-card__benday,
+  .event-card__title,
+  .event-card__mask,
+  .event-card--active .event-card__glint,
+  .event-card-enter {
+    animation: none;
   }
 
-  to {
-    opacity: 0.15;
-    transform: translateX(0);
+  .events-heading__glint,
+  .event-card__glint {
+    display: none;
+  }
+
+  .event-card,
+  .event-card:hover,
+  .event-card:hover .event-card__art,
+  .event-card:hover .event-card__title {
+    transform: none;
+    transition: none;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════
+   PHONE LAYOUT  (≤ 767px)
+
+   EVERY rule in this file below this line is inside a max-width media
+   query, which is the whole point: the desktop layout is tuned and must not
+   move, and a rule that only exists below 768px cannot move it. Nothing here
+   is a "responsive tweak" applied to a shared value — the laptop view is
+   reached by none of these selectors.
+
+   `!important` is load-bearing rather than lazy: these components style the
+   same properties INLINE (this codebase deliberately uses inline styles for
+   layout-critical values), and an inline style outranks any stylesheet rule
+   regardless of selector strength. Without it these rules are dead.
+
+   Matches MOBILE_BREAKPOINT in src/lib/beats.ts — the 3D rig switches to its
+   phone choreography at exactly the same width, so the character and the
+   layout can never disagree about which view is live.
+   ════════════════════════════════════════════════════════════ */
+@media (max-width: 767px) {
+  /* No sideways scroll, ever. A single overflowing decorative element —
+     an off-frame web SVG, a rotated colour block — otherwise lets the whole
+     page slide horizontally, which on a phone reads as the site being
+     broken even when every section is fine. */
+  html,
+  body {
+    overflow-x: hidden;
+    max-width: 100%;
+  }
+
+  /* The wordmark is `white-space: nowrap`, so it cannot wrap out of an
+     overrun — it just pushes the page wide. Smaller preferred size and a
+     much lower ceiling keep "XPLORE'26" on one line inside 390px. */
+  #hero h1 {
+    font-size: clamp(2.2rem, 14.5vw, 5rem) !important;
+    letter-spacing: 0.04em !important;
+  }
+
+  /* THE HERO IS THE CHARACTER on a phone. These two blurbs are capped at
+     210px each and sit at opposite ends of a flex row, so on a 390px screen
+     they collapse to ~155px columns of italic 12px text either side of him —
+     unreadable, and competing with the one thing that should carry the
+     screen. Hidden rather than restyled. */
+  .hero-bottom-cards {
+    display: none !important;
+  }
+
+  /* The top bar now carries two logo plates AND the links. Tighten the
+     gutter so they fit without the plates riding into the nav text. */
+  #hero nav {
+    padding: 14px 12px !important;
+  }
+
+  /* The events panel's side gutters are desktop-sized; give the card list
+     the width back. */
+  #events {
+    padding: 56px 0 60px !important;
   }
 }
