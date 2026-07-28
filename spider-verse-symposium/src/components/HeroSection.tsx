@@ -5,28 +5,28 @@ import Image, { type StaticImageData } from "next/image";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import HeroSpiders from "./HeroSpiders";
-import licetLogo from "../../images/Logo/licet logo.png";
-import deptLogo from "../../images/Logo/Dept logo.jpeg";
+import licetLogo from "../../images/Logo/licet-logo-transparent.png";
+import deptLogo from "../../images/Logo/dept-logo-transparent.png";
 
 gsap.registerPlugin(ScrollTrigger);
 
 /* ── INSTITUTION MARKS ───────────────────────────────────────────────────
-   Both logos are artwork on a WHITE ground — the department mark is a JPEG,
-   so it has no transparency at all, and the LICET file is a palette PNG
-   whose artwork is dark either way. Dropped straight onto the near-black
-   hero they would read as two stray white rectangles (or, if that palette
-   does carry alpha, as dark-on-dark and effectively invisible).
+   Both sources were flat white-background exports (the department mark a
+   JPEG, so no alpha at all; LICET a non-alpha PNG). tools/make-logo-
+   transparent.js floods the white out from each edge inward, so only
+   background actually connected to the border goes transparent — leaving
+   any white *inside* the artwork (crest highlights, etc.) intact — and
+   feathers the anti-aliased rim so the cutout isn't a hard jagged edge.
+   Re-run that script if either logo is ever replaced.
 
-   So they get a PLATE: a paper-white panel with the hard border and offset
-   ink shadow used everywhere else on this page. That makes the white ground
-   deliberate — a comic panel the logo is printed in — and it renders the
-   same whether or not the source has an alpha channel.
+   With real transparency there's no plate needed: the marks sit directly
+   on the hero.
 
    Sized by HEIGHT with width:auto because the two marks have very different
    aspect ratios (LICET is 176x148, near-square; EICON is portrait). Matching
    their heights is what makes them read as a pair. Both are set with clamp()
    so they shrink with the viewport instead of crowding the nav links. */
-function LogoPlate({
+function LogoMark({
   src,
   alt,
   height,
@@ -36,28 +36,15 @@ function LogoPlate({
   height: string;
 }) {
   return (
-    <div
-      style={{
-        background: "#F2EFE9",
-        border: "3px solid #F2EFE9",
-        boxShadow: "4px 4px 0 rgba(3, 7, 30, 0.9)",
-        padding: "4px 6px",
-        display: "flex",
-        alignItems: "center",
-        lineHeight: 0,
-        flex: "0 0 auto",
-      }}
-    >
-      <Image
-        src={src}
-        alt={alt}
-        priority
-        // Both dimensions touched (one explicit, one auto) — Next warns if
-        // CSS changes only one of them.
-        style={{ height, width: "auto" }}
-        sizes="140px"
-      />
-    </div>
+    <Image
+      src={src}
+      alt={alt}
+      priority
+      // Both dimensions touched (one explicit, one auto) — Next warns if
+      // CSS changes only one of them.
+      style={{ height, width: "auto" }}
+      sizes="140px"
+    />
   );
 }
 
@@ -1044,7 +1031,7 @@ export default function HeroSection({ start = true }: { start?: boolean }) {
             alignItems: "center",
             justifyContent: "space-between",
             // Horizontal padding shrinks with the viewport: the bar now
-            // carries two logo plates as well as the links, so a fixed 40px
+            // carries two logo marks as well as the links, so a fixed 40px
             // gutter is what would push them into each other on a laptop.
             padding: "20px clamp(14px, 3vw, 40px)",
             gap: 16,
@@ -1052,7 +1039,7 @@ export default function HeroSection({ start = true }: { start?: boolean }) {
         >
           {/* ── LEFT CORNER: the college mark, then the site's own spider ── */}
           <div style={{ display: "flex", alignItems: "center", gap: "clamp(10px, 1.6vw, 18px)" }}>
-            <LogoPlate
+            <LogoMark
               src={licetLogo}
               alt="Loyola-ICAM College of Engineering and Technology"
               height="clamp(32px, 4vw, 48px)"
@@ -1110,7 +1097,7 @@ export default function HeroSection({ start = true }: { start?: boolean }) {
             {/* Taller than the college mark on purpose: this one is portrait,
                 so matching their HEIGHTS exactly would leave it a narrow
                 sliver beside a near-square badge. */}
-            <LogoPlate
+            <LogoMark
               src={deptLogo}
               alt="EICON — Engineers Integrated for Computing Needs"
               height="clamp(38px, 4.8vw, 56px)"
