@@ -1434,9 +1434,28 @@ function CameraRig() {
    want anyway: the frame whose interval we just measured. */
 function PerfSampler() {
   const gl = useThree((s) => s.gl);
+
+  /* three.js clears info.render at the START of every render() call, and
+     EffectComposer renders once per pass. Reading it at the top of the next
+     frame therefore returned the LAST pass only — the fullscreen composite,
+     which is exactly 1 draw call and 1 triangle. That is what the first
+     recording reported, and it said nothing about the scene.
+
+     autoReset off makes the counters accumulate across every pass; we read the
+     whole frame's total and clear it ourselves. */
+  useEffect(() => {
+    if (!perfProbe.enabled) return;
+    gl.info.autoReset = false;
+    return () => {
+      gl.info.autoReset = true;
+    };
+  }, [gl]);
+
   useFrame(() => {
     perfProbe.frame(gl.info.render.calls, gl.info.render.triangles);
+    if (perfProbe.enabled) gl.info.reset();
   }, -1000);
+
   return null;
 }
 
