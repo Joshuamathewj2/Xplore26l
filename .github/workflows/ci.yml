@@ -35,8 +35,13 @@ jobs:
 
       # `npm ci` (not `install`) so the lockfile is authoritative and the run
       # is reproducible.
+      # `npm ci` has no timeout of its own, so a wedged runner or a stalled
+      # registry connection sits here until the 6-hour job limit. That happened:
+      # a run hung for 20+ minutes on inputs that installed in 13 seconds on the
+      # retry. Ten minutes is ~3x the normal install and fails loudly instead.
       - name: Install dependencies
         run: npm ci
+        timeout-minutes: 10
 
       - name: Typecheck
         run: npx tsc --noEmit
