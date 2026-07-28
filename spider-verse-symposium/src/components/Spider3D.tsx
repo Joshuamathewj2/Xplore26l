@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useLayoutEffect, useMemo, useRef } from "react";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Canvas, useFrame, useThree, type RootState } from "@react-three/fiber";
 import { useGLTF, useAnimations, Environment, Lightformer } from "@react-three/drei";
 import {
   EffectComposer,
@@ -15,6 +15,7 @@ import {
 import { ToneMappingMode } from "postprocessing";
 import * as THREE from "three";
 import { perfProbe } from "@/lib/perfProbe";
+import { DEBUG } from "@/lib/debugFlags";
 import { scrollState } from "@/lib/scrollState";
 import {
   activeBeats,
@@ -912,7 +913,14 @@ function MiguelCharacter() {
     }
   }, [scene]);
 
-  useFrame((state, delta) => {
+  useFrame((state, delta) =>
+    perfProbe.time("character:frame", () => characterFrame(state, delta))
+  );
+
+  /* Extracted so the whole per-frame body can be timed as one unit. Timing
+     INSIDE a callback is safe — it is changing the useFrame PRIORITY that
+     would make R3F hand over rendering, and that is not happening here. */
+  function characterFrame(state: RootState, delta: number) {
     const t = state.clock.elapsedTime;
     const r = rig.current;
 
@@ -1216,7 +1224,7 @@ function MiguelCharacter() {
       if (pitch !== 0) bone.quaternion.multiply(_qDelta.setFromAxisAngle(X_AXIS, pitch));
       if (roll !== 0) bone.quaternion.multiply(_qDelta.setFromAxisAngle(Z_AXIS, roll));
     }
-  });
+  }
 
   // Outer group = beat-driven stage offset; inner group carries the body yaw
   // + idle motion. Auto-fit put feet at y=0.
@@ -1483,7 +1491,8 @@ export default function Spider3D() {
         toneMapping: THREE.ACESFilmicToneMapping,
         toneMappingExposure: TONE.exposure,
       }}
-      dpr={[1, PERF.maxDpr]}
+      // ?dpr=1 pins it, to separate fill-rate cost from everything else.
+      dpr={DEBUG.dpr !== null ? DEBUG.dpr : [1, PERF.maxDpr]}
       camera={camera}
       style={{ width: "100%", height: "100%", pointerEvents: "none", background: "transparent" }}
     >
@@ -1531,9 +1540,12 @@ export default function Spider3D() {
 
       {/* ── POST STACK: bloom (HDR emissive only) → lens CA → filmic tone map
           → grade → vignette. Order is the order they run. ── */}
-      {POST.enabled && (
+      {POST.enabled && !DEBUG.noPost && (
         <EffectComposer multisampling={PERF.multisampling}>
           <Bloom
+            // ?nobloom=1 drops the mip chain while keeping the merged effects,
+            // separating Bloom's cost from the rest of the stack.
+            enabled={!DEBUG.noBloom}
             mipmapBlur
             intensity={POST.bloom.intensity}
             luminanceThreshold={POST.bloom.threshold}

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import { scrollState } from "@/lib/scrollState";
+import { perfProbe } from "@/lib/perfProbe";
 import { punchPos, punchWindow } from "@/lib/beats";
 import { playShatterSound, primeShatterSound } from "@/lib/impactAudio";
 
@@ -221,6 +222,13 @@ export default function ImpactCrack() {
 
     const tick = (now: number) => {
       raf = requestAnimationFrame(tick);
+      perfProbe.time("crack:tick", () => tickBody(now));
+    };
+
+    /* Split out so the whole body can be timed as one unit. This loop runs on
+       every frame for the life of the page, so if it is expensive it does not
+       need to be dramatic to matter. */
+    const tickBody = (now: number) => {
       const dt = Math.min((now - prev) / 1000, 0.1);
       prev = now;
 
