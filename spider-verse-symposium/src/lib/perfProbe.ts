@@ -29,6 +29,8 @@ export type FrameSample = {
   tris: number;
   /** Was the page scrolling within 100ms of this frame? */
   scrolling: boolean;
+  /** Within the first 3s — model parse, shader compile, texture upload. */
+  startup: boolean;
 };
 
 class PerfProbe {
@@ -108,6 +110,12 @@ class PerfProbe {
         calls,
         tris,
         scrolling: now - this.lastScrollAt < 100,
+        /* Startup is a different problem from steady state — model parse,
+           shader compile and texture upload all land in the first second or
+           two and would otherwise drag the percentiles for the whole run. The
+           first recording's 513ms worst frame was almost certainly the GLTF
+           landing, which says nothing about why scrolling feels rough. */
+        startup: now < 3000,
       });
       if (this.samples.length > CAP) this.samples.shift();
     }
@@ -123,9 +131,13 @@ class PerfProbe {
     const s = this.samples;
     if (!s.length) return null;
 
-    const intervals = s.map((x) => x.interval).sort((a, b) => a - b);
-    const scrolling = s.filter((x) => x.scrolling);
-    const still = s.filter((x) => !x.scrolling);
+    // Percentiles are STEADY STATE only. Startup frames are a separate
+    // problem and would otherwise dominate every number here.
+    const steady = s.filter((x) => !x.startup);
+    const base = steady.length > 30 ? steady : s;
+    const intervals = base.map((x) => x.interval).sort((a, b) => a - b);
+    const scrolling = base.filter((x) => x.scrolling);
+    const still = base.filter((x) => !x.scrolling);
     const lateOf = (arr: FrameSample[]) =>
       arr.length ? (arr.filter((x) => x.interval > 20).length / arr.length) * 100 : 0;
 
@@ -134,8 +146,10 @@ class PerfProbe {
       p50: this.pct(intervals, 0.5),
       p95: this.pct(intervals, 0.95),
       worst: intervals[intervals.length - 1],
-      calls: s[s.length - 1].calls,
-      tris: s[s.length - 1].tris,
+      calls: base[base.length - 1].calls,
+      tris: base[base.length - 1].tris,
+      nStartup: s.filter((x) => x.startup).length,
+      worstStartup: s.filter((x) => x.startup).reduce((m, x) => Math.max(m, x.interval), 0),
       /* The comparison that matters: if late frames cluster while scrolling,
          the cost is in the scroll path. If they are the same either way, it is
          the render itself and scrolling is innocent. */
@@ -157,7 +171,11 @@ class PerfProbe {
     }
 
     console.group("%c[perf] frame report", "color:#e63946;font-weight:bold");
-    console.log(`samples          ${this.samples.length}`);
+    console.log(`samples          ${this.samples.length}  (steady state, excl. first 3s)`);
+    console.log(
+      `startup          ${snap.nStartup} frames, worst ${snap.worstStartup.toFixed(0)}ms ` +
+        `— model parse / shader compile, a separate problem from the stutter`
+    );
     console.log(`fps (mean)       ${snap.fps.toFixed(1)}`);
     console.log(`frame p50 / p95  ${snap.p50.toFixed(1)}ms / ${snap.p95.toFixed(1)}ms`);
     console.log(`worst frame      ${snap.worst.toFixed(1)}ms`);
@@ -172,6 +190,20 @@ class PerfProbe {
     /* The interpretation, written down so the numbers do not need a second
        conversation to mean something. */
     console.log("%c— reading —", "color:#888");
+
+    /* Checked BEFORE anything else: the scrolling-vs-still split is the whole
+       point of the recording, and a run with no scroll samples cannot answer
+       it. The first recording had n=0 here, and the conclusion drawn from it
+       would have been about a symptom nobody reported. */
+    if (snap.nScrolling < 30) {
+      console.log(
+        `%cONLY ${snap.nScrolling} SCROLLING SAMPLES — this recording cannot say ` +
+          "anything about scroll-related stutter. Enter the portal so the page " +
+          "can scroll, scroll the hero for a few seconds, then run this again.",
+        "color:#e63946;font-weight:bold"
+      );
+    }
+
     if (snap.p95 < 20) {
       console.log(
         "frames are on time HERE. If it still felt choppy, the stutter is " +
