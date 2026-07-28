@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
-import { EVENT_DETAILS, type EventItem } from "@/data/events";
+import { getEventDetails, type EventItem } from "@/data/events";
 import SpiderTracerIcon from "./SpiderTracerIcon";
 
 const PAPER = "#F2EFE9";
@@ -49,6 +49,7 @@ export default function EventDetailsModal({
   if (!event || typeof document === "undefined") return null;
 
   const poster = event.brochure ?? event.image;
+  const details = getEventDetails(event.title);
   /* The dialog wears the same palette as the card it was opened from. */
   const RED = event.palette.accent;
   const FUCHSIA = event.palette.glow;
@@ -248,7 +249,7 @@ export default function EventDetailsModal({
               padding: "18px 20px 22px",
             }}
           >
-            {EVENT_DETAILS.map((section) => (
+            {details.map((section) => (
               <section key={section.heading} style={{ marginBottom: 20 }}>
                 <h4
                   style={{
