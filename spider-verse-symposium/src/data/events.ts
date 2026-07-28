@@ -160,9 +160,8 @@ export type DetailSection = {
 };
 
 /**
- * Shared rules shown in the details dialog. Every event currently uses this
- * same set — swap in per-event overrides via `EVENT_DETAILS_BY_TITLE` once
- * the real copy lands.
+ * Fallback rules shown in the details dialog for any event without its own
+ * entry in `EVENT_DETAILS_BY_TITLE` below (currently just the workshop).
  */
 export const EVENT_DETAILS: DetailSection[] = [
   {
@@ -219,6 +218,329 @@ export const EVENT_DETAILS: DetailSection[] = [
   },
 ];
 
+/**
+ * Real per-event rules, keyed by `EventItem.title`. Sourced from the
+ * official "All Events Rules and Regulations" document — headings follow
+ * each event's own doc rather than being forced into one shared shape.
+ * Look up via `getEventDetails`, which falls back to `EVENT_DETAILS` for
+ * anything not listed here (currently just the workshop).
+ */
+export const EVENT_DETAILS_BY_TITLE: Record<string, DetailSection[]> = {
+  "ACROSS THE SPIDERVERSE": [
+    {
+      heading: "Quest Format",
+      points: [
+        "Follow the clue chain to find hidden treasures",
+        "Some challenges may be coding or puzzle-based",
+        "Navigate through challenging environments",
+      ],
+    },
+    {
+      heading: "Winning Criteria",
+      points: ["First to complete the quest", "Least penalties from wrong clues"],
+    },
+    {
+      heading: "General Rules",
+      points: [
+        "All participants must register before the event",
+        "Valid student ID is mandatory for participation",
+        "Follow all safety guidelines and instructions",
+        "Respect other participants and organizers",
+      ],
+    },
+    {
+      heading: "Event Specific",
+      points: [
+        "Arrive 15 minutes before the event starts",
+        "Bring necessary equipment if required",
+        "No external assistance during competitions",
+        "Decisions of judges are final",
+      ],
+    },
+    {
+      heading: "Code of Conduct",
+      points: [
+        "Maintain professional behavior throughout",
+        "No use of unfair means or cheating",
+        "Report any issues to event coordinators",
+        "Help maintain a clean event environment",
+      ],
+    },
+    {
+      heading: "Important Notes",
+      points: [
+        "Winners will be announced at the closing ceremony",
+        "Certificates will be provided to all participants",
+        "Photos and videos may be taken during events",
+        "Contact organizers for any special requirements",
+      ],
+    },
+  ],
+  "BEYOND THE WEB": [
+    {
+      heading: "General Guidelines",
+      points: [
+        "Open to teams of 2–3 members",
+        "Present a Paper, Project or Poster based on your chosen category",
+        "All submissions must be original — plagiarism means immediate disqualification",
+        "Papers require a minimum of 15 pages; presentations are limited to 7–8 slides",
+        "Each team gets 7 minutes total: 5 for the presentation, 2 for Q&A",
+        "Submit your paper, abstract, poster or presentation before the deadline",
+        "The judges' decision is final and binding",
+      ],
+    },
+    {
+      heading: "Winning Criteria",
+      points: [
+        "Innovation & Originality",
+        "Technical Knowledge",
+        "Relevance of the Topic",
+        "Presentation Skills",
+        "Practical Application",
+        "Response to Judges' Questions",
+        "Time Management",
+      ],
+    },
+    {
+      heading: "Event Specific Rules",
+      points: [
+        "Paper Presentation: minimum 15-page paper, maximum 7–8 slides",
+        "Project Presentation: explain objective, methodology, implementation and results — a working prototype is preferred",
+        "Poster Presentation: present your idea clearly and be ready to explain it during evaluation",
+      ],
+    },
+    {
+      heading: "Code of Conduct",
+      points: [
+        "Maintain professionalism and respect toward judges, volunteers and fellow participants",
+        "Plagiarism or academic misconduct results in immediate disqualification",
+        "Offensive, inappropriate or disruptive behavior will not be tolerated",
+        "Follow all instructions from the event coordinators",
+      ],
+    },
+  ],
+  "MULTIVERSE BREACH": [
+    {
+      heading: "Building Rules",
+      points: [
+        "Teams of 1–3 participants",
+        "Register before the event begins",
+        "Use only your own laptop and internet connection unless stated otherwise",
+        "Internet resources, documentation and open-source tools are permitted",
+        "Collaboration between teams is strictly prohibited",
+        "Attacking the event infrastructure instead of solving challenges means immediate disqualification",
+      ],
+    },
+    {
+      heading: "Winning Criteria",
+      points: [
+        "Points are earned by submitting correct flags",
+        "Highest score at the end of the event wins",
+        "Ties go to whichever team reached the final score first",
+        "Organizers' decisions on scoring and rankings are final",
+      ],
+    },
+    {
+      heading: "General Rules",
+      points: [
+        "Flag format: SPIDER{...}",
+        "Flags are case-sensitive with no spaces",
+        "Every challenge can be solved independently",
+        "Do not share flags or solutions with other participants",
+        "Respect all participants and event volunteers",
+      ],
+    },
+    {
+      heading: "Event Specific",
+      points: [
+        "Difficulty levels: Easy, Medium and Hard",
+        "Allowed tools: CyberChef, Wireshark, Hashcat, John the Ripper, ExifTool, Steghide, Volatility, Linux Terminal and browser-based tools",
+        "Brute forcing outside the intended challenge scope is prohibited",
+        "Exploiting the event platform or scoreboard is forbidden",
+      ],
+    },
+    {
+      heading: "Code of Conduct",
+      points: [
+        "Maintain professionalism throughout the competition",
+        "Respect fellow participants and organizers",
+        "No offensive language or disruptive behavior",
+        "Cheating, plagiarism or sabotage means immediate disqualification",
+      ],
+    },
+    {
+      heading: "Important Notes",
+      points: [
+        "Read every challenge carefully before attempting it",
+        "Save your work frequently and ensure a stable internet connection",
+        "Participants are responsible for their own devices",
+        "Organizer decisions are final and cannot be challenged",
+      ],
+    },
+    { heading: "Venue", points: ["H22 (Lab)"] },
+  ],
+  "SPIDER SENSE": [
+    {
+      heading: "Building Rules",
+      points: [
+        "Teams of 2–3 members, fixed as per registration",
+        "Substitutions on event day require the in-charge's approval",
+      ],
+    },
+    {
+      heading: "Winning Criteria",
+      points: [
+        "The quiz runs across 3 rounds — shortlisted teams advance, others are eliminated",
+        "The top-scoring team(s) after Round 3 (Multiverse Abilities) are declared winners",
+      ],
+    },
+    {
+      heading: "General Rules",
+      points: [
+        "The quiz runs entirely on the official quiz website — log in with your team's assigned token",
+        "Own devices are required for every round",
+        "All timers are server-controlled and final; no answer in the window scores zero",
+      ],
+    },
+    {
+      heading: "Event Specific",
+      points: [
+        "Round 1 — Final Universe: three mini-games — Image Replication (AI image tools allowed), Connections, and a Spider-Verse Memory Game",
+        "Round 2 — Universe 1: Warm-up MCQs, 16 seconds per question (6s read + 10s select)",
+        "Round 3 — Universe 2: Multiverse Abilities, same timing with a live leaderboard and a Comeback Meter bonus for teams stuck at the bottom",
+      ],
+    },
+    {
+      heading: "Code of Conduct",
+      points: [
+        "AI tools, search engines and outside help are banned except in Round 1's Image Replication game",
+        "No help from spectators, other teams or unauthorized devices",
+        "The in-charges' decision on scoring and disputes is final",
+      ],
+    },
+    {
+      heading: "Important Notes",
+      points: [
+        "Timing, scoring or format may change before the event — watch the Rules Screen for updates",
+        "Participation implies acceptance of all rules stated above",
+      ],
+    },
+    { heading: "Venue", points: ["I11"] },
+    {
+      heading: "Event Coordinators",
+      points: ["Thameemul Azarudeen N", "Pranathi J", "Ponram P", "Anish Joseph Leo R"],
+    },
+  ],
+  "SPIDER SPRINT": [
+    {
+      heading: "Building Rules",
+      points: [
+        "Carry your college ID card at all times inside the venue",
+        "Entry is restricted to registered participants, volunteers, judges and faculty coordinators",
+        "No food or beverages inside the venue — water bottles are permitted",
+        "Sit at your allotted system; swapping seats without permission isn't allowed",
+        "Maintain silence during Rounds 1 and 2",
+      ],
+    },
+    {
+      heading: "Winning Criteria",
+      points: [
+        "Correctness of output is the primary criterion every round",
+        "Submission time is the tiebreaker when scores are equal",
+        "Rounds 2 and 3 use points-per-problem scoring with a time penalty for incorrect submissions",
+        "Code efficiency counts as bonus points in the final round",
+        "Highest cumulative score after Round 3 wins",
+      ],
+    },
+    {
+      heading: "General Rules",
+      points: [
+        "Open to all registered students — solo or team of 2",
+        "One entry per person, across teams",
+        "Report to the venue at least 15 minutes before the start",
+        "Round cutoffs are announced before each round begins",
+        "The event may run 2 rounds instead of 3 if registrations are low",
+      ],
+    },
+    {
+      heading: "Event Specific",
+      points: [
+        "Round 1 — Screening: MCQ only, 20–25 minutes; top 40–50% advance",
+        "Round 2 — Core Coding: 45 minutes, 3 problems of increasing difficulty; top 5–8 advance",
+        "Round 3 — Finale: live, on-stage, with a projected leaderboard and a possible live debugging challenge",
+        "Languages allowed: C, C++, Java, Python",
+      ],
+    },
+    {
+      heading: "Code of Conduct",
+      points: [
+        "No internet access during coding rounds except official documentation, if specified",
+        "No AI coding tools of any kind, at any point",
+        "No code sharing or plagiarism — finalists undergo manual review",
+        "Any malpractice means instant disqualification, with no prior warning",
+      ],
+    },
+    { heading: "Venue", points: ["I11"] },
+    {
+      heading: "Event Coordinators",
+      points: ["M Lathika Valli", "Abhijit", "Iyrin", "Ishithore"],
+    },
+  ],
+  "WEB FORGE": [
+    {
+      heading: "Building Rules",
+      points: [
+        "Build a static website prototype using Google AI Studio only",
+        "Must include a Home Page, Navigation Bar, Hero Section, Contact Section, responsive design and every mandatory feature on your challenge card",
+        "Refine your prompts throughout the round — aim for a working MVP, not a production build",
+        "Once the hidden challenge is revealed, incorporate it into your existing site within the remaining time",
+      ],
+    },
+    {
+      heading: "Winning Criteria",
+      points: [
+        "Prompt Engineering — 15",
+        "Creativity & Innovation — 20",
+        "Website Functionality — 25",
+        "UI & Navigation — 15",
+        "Problem Solving & Hidden Challenge Integration — 15",
+        "Presentation & Pitch — 10",
+      ],
+    },
+    {
+      heading: "General Rules",
+      points: [
+        "Teams of 2 participants",
+        "Every participant brings their own laptop and an active Google account",
+        "Report to the venue at least 15 minutes before the event begins",
+        "Submit before the allotted time ends — late submissions aren't accepted",
+        "The judges' decision is final and binding",
+      ],
+    },
+    {
+      heading: "Event Specific",
+      points: [
+        "Round 1 — AI Image Recreation: recreate a shared reference image in the fewest prompts; top 15 teams qualify",
+        "Round 2 — Website Prototype: build to a randomly drawn challenge card (one swap allowed), react to a Hidden Challenge revealed at the 30-minute mark, then pitch for 2–3 minutes with judge Q&A",
+      ],
+    },
+    {
+      heading: "Code of Conduct",
+      points: [
+        "Only Google AI Studio is allowed — no other AI tools",
+        "No copying prompts, generated content or designs from other teams",
+        "No sharing challenge cards or prompts with other participants",
+        "No offensive, inappropriate or copyrighted content",
+      ],
+    },
+  ],
+};
+
+/** Per-event rules if we have them, else the generic fallback. */
+export function getEventDetails(title: string): DetailSection[] {
+  return EVENT_DETAILS_BY_TITLE[title] ?? EVENT_DETAILS;
+}
+
 export const EVENTS: EventItem[] = [
   {
     title: "ACROSS THE SPIDERVERSE",
@@ -236,7 +558,7 @@ export const EVENTS: EventItem[] = [
     title: "BEYOND THE WEB",
     subtitle: "DIMENSION 02",
     description:
-      "Present your research across the multiverse of knowledge. Showcase groundbreaking ideas to a panel of experts.",
+      "Present your paper, project or poster across the multiverse of knowledge. Showcase groundbreaking ideas to a panel of judges.",
     palette: P_VENOM,
     image: charVenom,
     framing: { position: "58% 34%" },
@@ -260,7 +582,7 @@ export const EVENTS: EventItem[] = [
     title: "SPIDER SENSE",
     subtitle: "DIMENSION 04",
     description:
-      "Test your web of knowledge across technology, science, and innovation. Only the sharpest minds survive.",
+      "Three rounds across the multiverse — outwit AI image challenges, picture puzzles and rapid-fire trivia. Only the sharpest minds survive to the final round.",
     palette: P_INDIGO,
     image: charMiles,
     framing: { position: "50% 22%" },
@@ -270,7 +592,7 @@ export const EVENTS: EventItem[] = [
     title: "SPIDER SPRINT",
     subtitle: "DIMENSION 05",
     description:
-      "Race against time in this high-speed competitive programming challenge. Swing through algorithms at lightning pace.",
+      "Race the clock across three rounds — from MCQ screening to a live on-stage coding finale. Swing through algorithms at lightning pace.",
     // SPIDER-GWEN fronts the speed round: she is the fastest and most
     // acrobatic spider in the set, and the pink/cyan reads as motion rather
     // than menace — which is the difference between a race and a break-in.
@@ -283,7 +605,7 @@ export const EVENTS: EventItem[] = [
     title: "WEB FORGE",
     subtitle: "DIMENSION 06",
     description:
-      "Design and build a stunning website from scratch under the clock. Creativity, code quality and speed all count.",
+      "Prompt, build and pitch a website with Google AI Studio — race an image-recreation challenge, then design under a live client curveball. Creativity, functionality and pitch all count.",
     palette: P_PAVITR,
     image: charPavitr,
     framing: { position: "50% 40%" },

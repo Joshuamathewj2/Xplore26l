@@ -26,9 +26,17 @@ on:
     types: [opened, synchronize, reopened, closed]
     branches: [main]
 
+# Preview environments (one per PR) may cancel their own superseded runs — a
+# stale preview build helps nobody. Production must NOT: cancelling a deploy
+# leaves the previous build live with no sign anything went wrong.
+#
+# This was set to cancel-in-progress: true for both, and three PRs merged
+# inside 71 seconds cancelled the production deploy. The site kept serving a
+# three-day-old build, every video 404'd to the SPA fallback, and the run
+# showed as "cancelled" rather than failed — so nothing looked broken.
 concurrency:
   group: swa-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build_and_deploy:
