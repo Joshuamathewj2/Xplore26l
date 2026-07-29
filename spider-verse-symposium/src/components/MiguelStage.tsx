@@ -65,7 +65,13 @@ export default function MiguelStage({ start = true }: { start?: boolean }) {
       const beats = activeBeats.list;
       if (!beats.length) return;
 
-      const pos = Math.min(Math.max(scrollState.beatPos, 0), beats.length - 1);
+      /* The damped playhead, matching what the 3D is actually posing to. This
+         only chooses a z-index — a discrete decision behind a dead zone, so it
+         was never part of the jitter — but reading raw beatPos now that the
+         visuals are damped would flip the layer a frame or two BEFORE the
+         character arrives there, which is a pop rather than a stutter. */
+      const raw = scrollState.beatPosSmooth || scrollState.beatPos;
+      const pos = Math.min(Math.max(raw, 0), beats.length - 1);
       // Only move to a new beat once we're clear of the boundary dead zone.
       const nearest = Math.round(pos);
       if (nearest !== currentIdx && Math.abs(pos - nearest) < 0.5 - SWITCH_DEADZONE) {

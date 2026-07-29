@@ -242,8 +242,16 @@ export default function ImpactCrack() {
          moment than the fist arrives. Advancing it here as well as in
          BeatDriver is safe and deliberate: whichever loop runs first in a
          frame moves it, the other reads the same value back. It also means
-         the crack still works if the WebGL canvas never comes up. */
-      const pPos = punchPos(scrollState.beatPos, now, rm);
+         the crack still works if the WebGL canvas never comes up.
+
+         Fed from beatPosSmooth, the DAMPED playhead BeatDriver publishes, for
+         the same reason: the 3D poses off that now, and reading raw beatPos
+         here would put the glass on a signal that jumps once per wheel notch
+         while the fist it is supposed to track moves smoothly. The fallback to
+         beatPos covers the frames before BeatDriver's first tick, and the case
+         where the canvas never mounts at all. */
+      const playhead = scrollState.beatPosSmooth || scrollState.beatPos;
+      const pPos = punchPos(playhead, now, rm);
       /* UNCLAMPED: `p` is the crack's growth (0→1 across the window), but the
          one-shots need to know how far BEFORE contact the playhead has fallen
          back, which the clamp destroys. See the arming block below. */

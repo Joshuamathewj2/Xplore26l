@@ -1304,7 +1304,16 @@ function BeatDriver() {
   useFrame((_, delta) => {
     const beats = activeBeats.list;
     const maxIdx = beats.length - 1;
+
+    /* Raw beatPos, as it always was. Lenis eases the scroll POSITION, so this
+       already advances every frame; BEAT_DAMP below then smooths camera and
+       pose toward it, which is the arrangement the damping was tuned against.
+
+       A second damp was added here while the smooth-scroll layer was missing —
+       it helped, but two smoothing stages in series just add latency once the
+       input is continuous again. One mechanism, at the source. */
     const pos = THREE.MathUtils.clamp(scrollState.beatPos, 0, maxIdx);
+    scrollState.beatPosSmooth = pos;
     const i = Math.min(Math.floor(pos), Math.max(maxIdx - 1, 0));
     const a = beats[i];
     const b = beats[Math.min(i + 1, maxIdx)];
