@@ -58,7 +58,10 @@ export default function PerfHUD() {
         `longtask   ${String(s.worstLongTask).padStart(6)}ms${blocked}`,
         `late scrl  ${fmt(s.lateScrolling)}%${scrollFlag}`,
         `late still ${fmt(s.lateStill)}%`,
+        // target vs what the visuals actually follow — the gap between them
+        // while scrolling is the damping doing its job.
         `beatPos    ${fmt(scrollState.beatPos, 3)}`,
+        `  smoothed ${fmt(scrollState.beatPosSmooth, 3)}`,
         `progress   ${fmt(scrollState.progress, 3)}`,
         `velocity   ${fmt(scrollState.velocity)}`,
         ``,

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import { scrollState } from "@/lib/scrollState";
+import { perfProbe } from "@/lib/perfProbe";
 import { punchPos, punchWindow } from "@/lib/beats";
 import { playShatterSound, primeShatterSound } from "@/lib/impactAudio";
 
@@ -221,6 +222,13 @@ export default function ImpactCrack() {
 
     const tick = (now: number) => {
       raf = requestAnimationFrame(tick);
+      perfProbe.time("crack:tick", () => tickBody(now));
+    };
+
+    /* Split out so the whole body can be timed as one unit. This loop runs on
+       every frame for the life of the page, so if it is expensive it does not
+       need to be dramatic to matter. */
+    const tickBody = (now: number) => {
       const dt = Math.min((now - prev) / 1000, 0.1);
       prev = now;
 
@@ -234,8 +242,16 @@ export default function ImpactCrack() {
          moment than the fist arrives. Advancing it here as well as in
          BeatDriver is safe and deliberate: whichever loop runs first in a
          frame moves it, the other reads the same value back. It also means
-         the crack still works if the WebGL canvas never comes up. */
-      const pPos = punchPos(scrollState.beatPos, now, rm);
+         the crack still works if the WebGL canvas never comes up.
+
+         Fed from beatPosSmooth, the DAMPED playhead BeatDriver publishes, for
+         the same reason: the 3D poses off that now, and reading raw beatPos
+         here would put the glass on a signal that jumps once per wheel notch
+         while the fist it is supposed to track moves smoothly. The fallback to
+         beatPos covers the frames before BeatDriver's first tick, and the case
+         where the canvas never mounts at all. */
+      const playhead = scrollState.beatPosSmooth || scrollState.beatPos;
+      const pPos = punchPos(playhead, now, rm);
       /* UNCLAMPED: `p` is the crack's growth (0→1 across the window), but the
          one-shots need to know how far BEFORE contact the playhead has fallen
          back, which the clamp destroys. See the arming block below. */

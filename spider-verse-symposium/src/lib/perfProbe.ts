@@ -43,6 +43,33 @@ class PerfProbe {
   /** Long tasks (>50ms) seen since the last report. */
   longTasks: { start: number; duration: number; name: string }[] = [];
 
+  /* Per-subsystem timings, so "the main thread is blocked" becomes "blocked by
+     this". The long-task observer says a block happened; it does not say whose
+     code it was, and guessing that from a list of candidates is how the last
+     three rounds went wrong. */
+  private marks = new Map<string, { total: number; n: number; worst: number }>();
+
+  /**
+   * Time a block of work. Costs one performance.now() pair when the probe is
+   * on, and a single boolean test when it is off.
+   *
+   *   perfProbe.time("crack", () => { ...per-frame work... });
+   */
+  time<T>(label: string, fn: () => T): T {
+    if (!this.enabled) return fn();
+    const t0 = performance.now();
+    try {
+      return fn();
+    } finally {
+      const ms = performance.now() - t0;
+      const m = this.marks.get(label) ?? { total: 0, n: 0, worst: 0 };
+      m.total += ms;
+      m.n += 1;
+      if (ms > m.worst) m.worst = ms;
+      this.marks.set(label, m);
+    }
+  }
+
   init() {
     if (typeof window === "undefined") return;
     this.enabled = new URLSearchParams(window.location.search).get("debug") === "perf";
@@ -227,7 +254,24 @@ class PerfProbe {
       console.log("late frames cluster WHILE SCROLLING — cost is in the scroll path");
     }
 
+    /* Whose code was it. Sorted by total time, because a cheap thing called
+       every frame outranks an expensive thing called once. */
+    if (this.marks.size) {
+      const rows = [...this.marks.entries()]
+        .map(([label, m]) => ({
+          label,
+          "avg ms": +(m.total / m.n).toFixed(3),
+          "worst ms": +m.worst.toFixed(1),
+          calls: m.n,
+          "total ms": +m.total.toFixed(0),
+        }))
+        .sort((a, b) => b["total ms"] - a["total ms"]);
+      console.log("%c— where the main thread went —", "color:#888");
+      console.table(rows);
+    }
+
     if (this.longTasks.length) {
+      console.log("%c— long tasks (>50ms) —", "color:#888");
       console.table(this.longTasks.slice(-15));
     }
     console.groupEnd();
@@ -235,6 +279,7 @@ class PerfProbe {
 
   reset() {
     this.samples = [];
+    this.marks.clear();
     this.longTasks = [];
     this.lastFrameAt = 0;
     console.info("[perf] cleared");

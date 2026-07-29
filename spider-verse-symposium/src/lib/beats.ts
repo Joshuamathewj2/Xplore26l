@@ -182,14 +182,23 @@ export const BEATS: Beat[] = [
   },
   {
     /* 3 ── THE VIDEO BREAK (the 40vh loader1.mp4 strip between events and
-       sponsors). Selector is the adjacent sibling of #events — that section
-       has no id of its own and I'm not adding one.
+       sponsors).
+
+       This used to be `#events + section` — "the section right after events" —
+       on the reasoning that the strip had no id and did not need one. It broke
+       silently when a zero-height div holding a decorative stamp was inserted
+       between the two: `+` matches only an IMMEDIATE sibling, so the selector
+       stopped resolving, ScrollRig dropped the beat with a console warning, and
+       the character interpolated straight from events to sponsors — skipping
+       the pose this entry exists to hold. The section now carries id
+       "interlude" and is matched by it. Positional selectors are broken by
+       edits made nowhere near them.
 
        Pure transit: he drifts back toward centre, arms dropping to a relaxed
        hang (armPose 4), glow dimming so the video reads. z20 because this
        strip is opaque black at layer 0 and the sponsors block right after it
        pins itself at z10. */
-    selector: "#events + section",
+    selector: "#interlude",
     id: "interlude",
     cam: [0, 1.8, 4.2],
     look: [-0.1, 1.6, 0],
