@@ -1270,6 +1270,17 @@ const armNow: ArmBlend = {
     whole point of the shared signal is that they cannot disagree. */
 const punchNow: PunchDrive = { torso: 0, impact: 0, grip: 0 };
 
+/* ── MOBILE POST-SPONSOR CLEAR ──
+   `#coordinators` has no beat of its own (see beats.ts: sponsors is "the
+   last reachable anchor"), so on a phone the rig just holds the sponsors
+   punch pose — full-screen, centred — for the rest of the page, sat at
+   zIndex 30 over the coordinator cards' zIndex 10. These are the target
+   char.x / scale / energy he eases toward, blended in by
+   `scrollState.postSponsorProgress`, as that section scrolls into view:
+   a small silhouette parked at the screen's right edge instead of centred
+   over the names. Desktop is untouched — this only reads on mobile. */
+const COORD_CLEAR = { x: 0.42, scale: 0.34, energy: 0.5 };
+
 // Scratch target (module-level: zero per-frame allocation).
 const _beatTarget = {
   cam: new THREE.Vector3(),
@@ -1358,6 +1369,57 @@ function BeatDriver() {
     // Arms bypass the camera damp entirely — the arm layer applies its own
     // (heavier) damp, and stacking the two just made the arms feel mushy.
     beatNow.armPoseRaw = a.armPose + (b.armPose - a.armPose) * e;
+
+    // MOBILE EVENTS EXIT HOLD — see eventsClearProgress in scrollState.ts.
+    // `#events` is a tall stack of six cards on a phone, but its beat anchor
+    // sits at the section's CENTRE, and that anchor-to-anchor gap is so
+    // dominated by "everything after the centre of a six-card stack" that the
+    // HOLD-compressed beatPos formula in ScrollRig SATURATES at the "interlude"
+    // beat well before the section has actually scrolled past — measured: `a`
+    // flips from "events" to "interlude" while `#events`' bottom edge is still
+    // ~700px above the bottom of a tall card stack. Gating this hold on
+    // `a.id === "events"` (the first version of this fix) therefore released
+    // it at exactly the wrong moment: it let go the instant the beat flipped,
+    // which is BEFORE the section clears, so this is keyed on
+    // `eventsClearProgress` alone — real bounding-rect math — regardless of
+    // which two beats are currently being blended. Uses the "events" beat's
+    // OWN char/energy (found by id, not `a`, since `a` may already be
+    // "interlude" or "sponsors" while this is still holding) as the pinned
+    // target, and releases into whatever the natural blend is computing once
+    // the section has actually cleared — which may already be mid-punch, and
+    // should be: the arm-pose FSM runs off its own rate-limited playhead
+    // (punchPos/PUNCH_TEMPO), so it still performs the full wind-up-to-landed
+    // sequence over real time from wherever it currently is, rather than
+    // popping to the end.
+    //
+    // BUT `eventsClearProgress` is ALSO 0 before scroll ever reaches
+    // `#events` — including at the very top of the page, before the hero
+    // beat has moved at all — not just while inside the section. Gating on
+    // it alone (the second cut of this fix) pinned Miguel to the events exit
+    // pose from scrollY 0, hiding him through the entire hero beat. `pos`
+    // must ALSO have actually reached the "events" beat's own index before
+    // this hold is allowed to engage — that's the `pos >= eventsIdx` half of
+    // the guard below.
+    const eventsIdx = beats.findIndex((bb) => bb.id === "events");
+    if (scrollState.isMobile && eventsIdx >= 0 && pos >= eventsIdx && scrollState.eventsClearProgress < 1) {
+      const eventsBeat = beats[eventsIdx];
+      const release = scrollState.eventsClearProgress;
+      const ep = release * release * (3 - 2 * release);
+      T.charX = eventsBeat.char.x + (T.charX - eventsBeat.char.x) * ep;
+      T.charScale = eventsBeat.char.scale + (T.charScale - eventsBeat.char.scale) * ep;
+      T.energy = eventsBeat.energy + (T.energy - eventsBeat.energy) * ep;
+    }
+
+    // MOBILE POST-SPONSOR CLEAR — see COORD_CLEAR above. `postSponsorProgress`
+    // is 0 for the whole page until #coordinators is actually scrolling into
+    // view, so this is a no-op everywhere except the very bottom of a phone.
+    if (scrollState.isMobile && scrollState.postSponsorProgress > 0) {
+      const p = scrollState.postSponsorProgress;
+      const ep = p * p * (3 - 2 * p); // smoothstep — gentle ease, not linear
+      T.charX += (COORD_CLEAR.x - T.charX) * ep;
+      T.charScale += (COORD_CLEAR.scale - T.charScale) * ep;
+      T.energy += (COORD_CLEAR.energy - T.energy) * ep;
+    }
 
     if (!beatNow.initialized) {
       // First frame (or a reload landing mid-page): snap, don't glide in.

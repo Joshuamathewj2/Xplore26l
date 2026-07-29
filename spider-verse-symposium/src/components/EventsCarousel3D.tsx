@@ -311,6 +311,14 @@ export default function EventsCarousel3D({
         orthographic
         camera={{ position: [0, 0, 500], zoom: ZOOM, near: 0.1, far: 2000 }}
         gl={{ alpha: true, antialias: true }}
+        // Capped for the same reason Spider3D caps its own canvas (see the
+        // PERF note there): this page runs TWO WebGL contexts continuously
+        // for as long as it's open, and an uncapped dpr here was rendering
+        // at full device pixel ratio (2-3x on most laptops/phones) — 4-9x
+        // the pixels to shade per frame — on top of the persistent 3D rig
+        // already running. That's a standing cost for the whole session,
+        // not just while this section is on screen.
+        dpr={[1, 1.5]}
         style={{ background: "transparent" }}
       >
         <Rig

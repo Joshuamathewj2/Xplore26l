@@ -298,21 +298,149 @@ export const EVENTS: EventItem[] = [
 
    Deliberately an ARRAY holding one entry rather than a bare object: there
    is one workshop this year, and the tab in FeaturedEventsSection already
-   maps over it, so adding a second is a data edit and nothing else.
-
-   >>> TITLE, DESCRIPTION AND registerUrl ARE PLACEHOLDERS <<<
-   Drop the real workshop name, blurb and Google Form link in here. The card
-   renders a live Register button, so the URL below currently opens the
-   events landing form — replace it before this goes public. */
+   maps over it, so adding a second is a data edit and nothing else. */
 export const WORKSHOPS: EventItem[] = [
   {
-    title: "THE SPIDER LAB",
+    title: "Full Stack Spider-Verse Workshop",
     subtitle: "WORKSHOP 01",
     description:
-      "A hands-on build session with the people who ship it. Bring a laptop, leave with something that runs.",
+      "Build a Campus Event Registration Portal from scratch while learning modern full-stack development. Explore Next.js 15, React, Tailwind CSS, Clerk Authentication, Supabase, FastAPI, Gemini AI, and Vercel Deployment through a hands-on project. Perfect for beginner to intermediate students looking to understand real-world full-stack workflows and AI integration.",
     palette: P_2099,
     image: charSpidey,
     framing: { position: "50% 30%" },
-    registerUrl: "https://forms.gle/jQU3VMCiNX9T3rVZ8",
+    registerUrl:
+      "https://docs.google.com/forms/d/e/1FAIpQLSfDGcZIDifZCxAXELaK_WpnfrDAmB4E4SeblBNp_OA9MnAN9w/viewform?usp=publish-editor",
   },
 ];
+
+/* ── PER-EVENT DETAIL OVERRIDES ──
+   Keyed by title rather than array index so a reorder in EVENTS/WORKSHOPS
+   can never silently pair the wrong rules with the wrong card. Falls back
+   to the shared EVENT_DETAILS above for anything not listed here — every
+   competition event still uses those generic rules; only the workshop
+   (a taught session, not a judged competition) needs its own set. */
+export const EVENT_DETAILS_BY_TITLE: Record<string, DetailSection[]> = {
+  "BEYOND THE WEB": [
+    {
+      heading: "Building Rules",
+      points: [
+        "Maximum 3 participants per team",
+        "Inter-college teams are allowed",
+        "One participant can join only one team",
+        "Categories: Research Paper, Project, Prototype, or Poster",
+      ],
+    },
+    {
+      heading: "Winning Criteria",
+      points: [
+        "Technical Innovation",
+        "Problem & Solution",
+        "Methodology",
+        "Results",
+        "Presentation Skills",
+        "Q&A Performance",
+      ],
+    },
+    {
+      heading: "General Rules",
+      points: [
+        "Carry your College ID Card",
+        "Shortlisted teams will present on 8th August",
+        "Teams with prototypes must arrange their own demonstration setup",
+        "Abstract should not exceed 250 words",
+      ],
+    },
+    {
+      heading: "Event Specific",
+      points: [
+        "Research Paper: IEEE format preferred, 6–15 pages with one-page abstract",
+        "Project/Prototype: Report of 3–10 pages with one-page abstract",
+        "Poster: A1/A2 size (digital copy in PDF to be submitted) with a one-page abstract",
+        "Presentation: 7 minutes + 3 minutes Q&A",
+      ],
+    },
+    {
+      heading: "Code of Conduct",
+      points: [
+        "Maintain professional and respectful behavior",
+        "Submit original work only",
+        "Adhere to the general guidelines",
+        "Any misconduct may lead to disqualification",
+      ],
+    },
+    {
+      heading: "Important Notes",
+      points: [
+        "Only shortlisted teams will present",
+        "Top 2 teams from each department qualify for the finals",
+        "Top 3 teams overall will receive prizes and certificates",
+        "The judges' decision is final",
+      ],
+    },
+  ],
+  "Full Stack Spider-Verse Workshop": [
+    {
+      heading: "Conducted By",
+      points: ["Rehaan Rafael John — III CSE B"],
+    },
+    {
+      heading: "Workshop Info",
+      points: [
+        "Duration: 4 hours",
+        "Target audience: beginner to intermediate students",
+        "Venue: A12",
+      ],
+    },
+    {
+      heading: "Prerequisites",
+      points: [
+        "Basic programming knowledge (variables, loops, functions)",
+        "No prior web development experience required",
+      ],
+    },
+    {
+      heading: "To Bring",
+      points: ["Laptop and charger"],
+    },
+    {
+      heading: "Learning Objectives",
+      points: [
+        "What Full Stack actually means",
+        "How the frontend talks to the backend",
+        "REST APIs",
+        "Authentication",
+        "Databases",
+        "AI integration",
+        "Deployment",
+        "Real developer workflow",
+      ],
+    },
+    {
+      heading: "Project: Campus Event Registration Portal",
+      points: [
+        "Login",
+        "View events",
+        "Register for events",
+        "See your registrations",
+        "Ask an AI assistant about events",
+      ],
+    },
+    {
+      heading: "Tech Stack",
+      points: [
+        "Frontend — Next.js 15, React, Tailwind CSS, TypeScript",
+        "Authentication — Clerk",
+        "Database — Supabase",
+        "AI backend — FastAPI",
+        "AI — Gemini API",
+        "Hosting — Vercel",
+      ],
+    },
+  ],
+};
+
+/** Detail sections for a given event/workshop title, falling back to the
+ *  shared competition rules when there's no title-specific override. */
+export function detailsFor(title: string): DetailSection[] {
+  return EVENT_DETAILS_BY_TITLE[title] ?? EVENT_DETAILS;
+}

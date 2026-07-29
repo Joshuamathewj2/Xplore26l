@@ -182,14 +182,24 @@ export const BEATS: Beat[] = [
   },
   {
     /* 3 ── THE VIDEO BREAK (the 40vh loader1.mp4 strip between events and
-       sponsors). Selector is the adjacent sibling of #events — that section
-       has no id of its own and I'm not adding one.
+       sponsors). That section has no id of its own and I'm not adding one,
+       so this selects it as the first `section` sibling AFTER #events —
+       NOT `#events + section` (adjacent-sibling), because a zero-height
+       `<div>` wrapping the "POW!" ComicStamp sits between them in page.tsx,
+       so `+` never matches and this beat silently dropped out of
+       `activeBeats` (console-warned, easy to miss). Losing it isn't just a
+       cosmetic gap: `resolveArms`/`punchDrive` key the whole wind-up-to-
+       landed punch off `pos > maxIdx − 1`, so with this beat gone `maxIdx`
+       drops from 3 to 2 and the ENTIRE punch sequence compresses into the
+       events→sponsors gap, firing the instant `pos` clears 1 — i.e. while
+       still on the "events" beat, before the six-card deck has even
+       scrolled past on a phone.
 
        Pure transit: he drifts back toward centre, arms dropping to a relaxed
        hang (armPose 4), glow dimming so the video reads. z20 because this
        strip is opaque black at layer 0 and the sponsors block right after it
        pins itself at z10. */
-    selector: "#events + section",
+    selector: "#events ~ section",
     id: "interlude",
     cam: [0, 1.8, 4.2],
     look: [-0.1, 1.6, 0],

@@ -48,6 +48,15 @@ export default function ScrollRig() {
     /* ── beat anchors: scrollY at which each beat's section is centred ── */
     let anchors: number[] = [0];
 
+    /* `#coordinators` has no beat of its own (see the note in beats.ts on why
+       `sponsors` is the last reachable anchor) — cached here so writeState
+       can read its rect on every scroll tick without re-querying the DOM. */
+    let coordinatorsEl: HTMLElement | null = null;
+
+    /* Cached the same way, for the `#events` "has it fully scrolled past"
+       signal (see eventsClearProgress in scrollState.ts). */
+    let eventsEl: HTMLElement | null = null;
+
     const measure = () => {
       const scrollY = window.scrollY;
       const vh = window.innerHeight;
@@ -88,6 +97,9 @@ export default function ScrollRig() {
       // `<`, matching FeaturedEventsSection's own check exactly — at 768px
       // the deck and the rig must not disagree about which layout is live.
       const isMobile = window.innerWidth < MOBILE_BREAKPOINT;
+      scrollState.isMobile = isMobile;
+      coordinatorsEl = document.querySelector<HTMLElement>("#coordinators");
+      eventsEl = document.querySelector<HTMLElement>("#events");
 
       // Nothing resolved (shouldn't happen) — keep the full list so the 3D
       // still renders at beat 0 rather than crashing on an empty array.
@@ -142,6 +154,34 @@ export default function ScrollRig() {
       scrollState.progress = Math.min(Math.max(y / maxScroll, 0), 1);
       scrollState.velocity = y - lastY;
       lastY = y;
+
+      // 0 while `#coordinators` is still below the fold, ramping to 1 as its
+      // top scrolls up to the viewport top. getBoundingClientRect() is
+      // already viewport-relative, so this needs no anchor/scrollY math.
+      if (coordinatorsEl) {
+        const vh = window.innerHeight;
+        const top = coordinatorsEl.getBoundingClientRect().top;
+        scrollState.postSponsorProgress = Math.min(Math.max((vh - top) / vh, 0), 1);
+      } else {
+        scrollState.postSponsorProgress = 0;
+      }
+
+      // 0 while any part of `#events` is still below the viewport's top edge
+      // (bottom > 0, i.e. the section hasn't fully scrolled past), ramping to
+      // 1 over a SHORT band after — 12% of a viewport, not a whole one. This
+      // has to be snappy: the punch's wind-up-to-landed sequence is timed
+      // to start right after the reveal (see PUNCH_TEMPO in beats.ts), so a
+      // slow release here delays the reveal far enough that the punch's own
+      // rate-limited playhead can run — and finish — before Miguel is ever
+      // let back on screen. See eventsClearProgress in scrollState.ts for
+      // why Spider3D needs this instead of the beat anchor at all.
+      if (eventsEl) {
+        const vh = window.innerHeight;
+        const bottom = eventsEl.getBoundingClientRect().bottom;
+        scrollState.eventsClearProgress = Math.min(Math.max(-bottom / (vh * 0.12), 0), 1);
+      } else {
+        scrollState.eventsClearProgress = 1;
+      }
 
       const n = anchors.length;
       if (n <= 1) {

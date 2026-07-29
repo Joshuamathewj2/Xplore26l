@@ -216,13 +216,16 @@ export default function EventCard({
           <h3
             style={{
               margin: 0,
-              fontFamily: "var(--font-brutal)",
+              // Archivo Black at this weight/tracking read as texture rather
+              // than words — Anton (the site's display font everywhere else)
+              // is bold but its letterforms stay open and legible at card size.
+              fontFamily: "var(--font-display)",
               fontSize: "1.5rem",
-              lineHeight: 1.02,
-              letterSpacing: "-0.01em",
+              lineHeight: 1.05,
+              letterSpacing: "0.01em",
               textTransform: "uppercase",
               color: INK,
-              textShadow: `3px 3px 0 ${glow}`,
+              textShadow: `2px 2px 0 ${glow}`,
             }}
           >
             {event.title}

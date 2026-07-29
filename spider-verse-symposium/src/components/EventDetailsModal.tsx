@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
-import { EVENT_DETAILS, type EventItem } from "@/data/events";
+import { detailsFor, type EventItem } from "@/data/events";
 import SpiderTracerIcon from "./SpiderTracerIcon";
 
 const PAPER = "#F2EFE9";
@@ -80,6 +80,7 @@ export default function EventDetailsModal({
     >
       <div
         ref={panelRef}
+        className="event-modal__panel"
         style={{
           position: "relative",
           width: "min(1040px, 100%)",
@@ -93,6 +94,7 @@ export default function EventDetailsModal({
       >
         {/* ── Left: brochure + register ── */}
         <div
+          className="event-modal__poster-col"
           style={{
             width: "40%",
             minWidth: 280,
@@ -237,6 +239,7 @@ export default function EventDetailsModal({
           </div>
 
           <div
+            className="event-modal__rules"
             style={{
               flex: 1,
               minHeight: 0,
@@ -248,7 +251,19 @@ export default function EventDetailsModal({
               padding: "18px 20px 22px",
             }}
           >
-            {EVENT_DETAILS.map((section) => (
+            <p
+              style={{
+                margin: "0 0 20px",
+                fontFamily: "var(--font-mono)",
+                fontSize: "0.82rem",
+                lineHeight: 1.65,
+                color: "rgba(242,239,233,0.92)",
+              }}
+            >
+              {event.description}
+            </p>
+
+            {detailsFor(event.title).map((section) => (
               <section key={section.heading} style={{ marginBottom: 20 }}>
                 <h4
                   style={{
