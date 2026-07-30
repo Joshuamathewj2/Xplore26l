@@ -65,6 +65,18 @@ export default function EventDetailsModal({
       onClick={(e) => {
         if (!panelRef.current?.contains(e.target as Node)) onClose();
       }}
+      // ScrollRig's Lenis instance normally intercepts every wheel/touch
+      // event on `window` and preventDefault()s it to drive its own virtual
+      // scroll — including ones that land on this dialog's own scrollable
+      // list, which both stopped that list from scrolling natively AND fed
+      // a fake scroll delta into scrollState, so the 3D scene behind the
+      // dialog kept gliding while you scrolled the rules. `data-lenis-prevent`
+      // is Lenis's own escape hatch: it walks the event's composed path for
+      // this attribute and, if found, skips the element entirely — no
+      // preventDefault, no virtual-scroll processing — so wheel/touch here
+      // fall through to plain native scrolling, scoped to whatever's
+      // actually scrollable under the pointer (the rules list below).
+      data-lenis-prevent
       style={{
         position: "fixed",
         inset: 0,
