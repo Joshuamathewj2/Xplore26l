@@ -15,17 +15,19 @@
    3. `prefers-reduced-motion`: flag the store so the 3D snaps between beats
       instead of gliding.
 
+   Uses Lenis for smooth scroll (full-motion path only, native scroll under
+   reduced motion) — see the note above the Lenis setup below for why.
+
    DELIBERATELY NOT USED HERE:
-   • Lenis — this page scrolls natively and adding smooth-scroll would
-     change the feel of every existing section, not just the 3D.
    • GSAP ScrollTrigger — HeroSection's cleanup calls
      `ScrollTrigger.getAll().forEach(st => st.kill())`, which would tear down
-     any trigger this file created. A plain passive scroll listener is
-     immune to that, and the beat damping in Spider3D already does the
-     smoothing a scrub would have provided.
+     any trigger this file created. A plain passive scroll listener/Lenis
+     instance is immune to that.
    ════════════════════════════════════════════════════════════ */
 
 import { useEffect } from "react";
+import Lenis from "@studio-freight/lenis";
+import gsap from "gsap";
 import { scrollState } from "@/lib/scrollState";
 import {
   BEATS,
@@ -57,13 +59,22 @@ export default function ScrollRig() {
        signal (see eventsClearProgress in scrollState.ts). */
     let eventsEl: HTMLElement | null = null;
 
+    /* Cached alongside the anchors, and for the same reason.
+       writeState used to compute this per scroll event:
+         document.documentElement.scrollHeight - window.innerHeight
+       scrollHeight is a layout-triggering read, so every scroll event could
+       force a synchronous reflow — on a page that has a full-screen WebGL
+       canvas and DOM overlays being restyled every frame, that reflow is not
+       cheap and it lands directly in the scroll path. The anchors were already
+       measured once and reused; this value had simply been missed. */
+    let maxScroll = 1;
+
     const measure = () => {
       const scrollY = window.scrollY;
       const vh = window.innerHeight;
-      const maxScroll = Math.max(
-        document.documentElement.scrollHeight - vh,
-        1
-      );
+      // Assigns the OUTER maxScroll (declared with the anchors), not a local:
+      // writeState reads it on every scroll event and must not re-measure.
+      maxScroll = Math.max(document.documentElement.scrollHeight - vh, 1);
 
       // Resolve selectors, keeping beat + element paired so a miss drops the
       // beat instead of renumbering the rest.
@@ -147,10 +158,6 @@ export default function ScrollRig() {
     /* ── scrollY → scrollState (progress + continuous beatPos) ── */
     let lastY = window.scrollY;
     const writeState = (y: number) => {
-      const maxScroll = Math.max(
-        document.documentElement.scrollHeight - window.innerHeight,
-        1
-      );
       scrollState.progress = Math.min(Math.max(y / maxScroll, 0), 1);
       scrollState.velocity = y - lastY;
       lastY = y;
@@ -207,8 +214,48 @@ export default function ScrollRig() {
     measure();
     writeState(window.scrollY);
 
+    /* ── SMOOTH SCROLL (full-motion path only) ──
+       Restored. It was removed on the reasoning that "the beat damping in
+       Spider3D already does the smoothing a scrub would have provided", and
+       that is not what it does: BEAT_DAMP eases the camera and pose toward
+       whatever target the CURRENT beatPos implies, but beatPos itself only
+       moves when a scroll event fires. Native wheel scrolling starts and stops
+       abruptly, so the damping was being fed a step function — it smoothed the
+       edges of each step without removing the step. On screen that reads as the
+       character being knocked along once per notch and settling the moment
+       scrolling stops, which is exactly what was reported.
+
+       Lenis eases the scroll POSITION over ~1.1s, so beatPos advances every
+       frame and the existing damping gets a continuous signal, which is what it
+       was tuned against.
+
+       Touch stays native — syncTouch: false — so mobile scrolling is never
+       hijacked. Reduced motion skips Lenis entirely.
+
+       No ScrollTrigger here, deliberately: HeroSection's cleanup calls
+       ScrollTrigger.getAll().forEach(st => st.kill()) and would tear down
+       anything this file registered. Only the smooth-scroll half is restored. */
+    let lenis: Lenis | null = null;
+    let tickerFn: ((time: number) => void) | null = null;
     const onScroll = () => writeState(window.scrollY);
-    window.addEventListener("scroll", onScroll, { passive: true });
+
+    if (!mq.matches) {
+      lenis = new Lenis({
+        duration: 1.1, // glide length; raise for floatier, lower for snappier
+        easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+        smoothWheel: true,
+        syncTouch: false,
+        wheelMultiplier: 1,
+        touchMultiplier: 1.5,
+      });
+      lenis.on("scroll", (l: { scroll: number }) => writeState(l.scroll));
+      // One clock for everything: GSAP's ticker drives Lenis' raf.
+      tickerFn = (time: number) => lenis?.raf(time * 1000);
+      gsap.ticker.add(tickerFn);
+      gsap.ticker.lagSmoothing(0);
+    } else {
+      window.addEventListener("scroll", onScroll, { passive: true });
+    }
 
     /* ── re-measure on layout changes ──
        This page starts locked at 100vh behind the portal overlay and only
@@ -240,6 +287,10 @@ export default function ScrollRig() {
       window.removeEventListener("load", onResize);
       ro.disconnect();
       settleTimers.forEach((t) => window.clearTimeout(t));
+      // Lenis keeps a wheel listener and a GSAP ticker callback alive; leaving
+      // either behind survives a remount and scrolls the page twice per notch.
+      if (tickerFn) gsap.ticker.remove(tickerFn);
+      lenis?.destroy();
     };
   }, []);
 

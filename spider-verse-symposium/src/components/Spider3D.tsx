@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useLayoutEffect, useMemo, useRef } from "react";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Canvas, useFrame, useThree, type RootState } from "@react-three/fiber";
 import { useGLTF, useAnimations, Environment, Lightformer } from "@react-three/drei";
 import {
   EffectComposer,
@@ -14,6 +14,8 @@ import {
 } from "@react-three/postprocessing";
 import { ToneMappingMode } from "postprocessing";
 import * as THREE from "three";
+import { perfProbe } from "@/lib/perfProbe";
+import { DEBUG } from "@/lib/debugFlags";
 import { scrollState } from "@/lib/scrollState";
 import {
   activeBeats,
@@ -188,7 +190,12 @@ const PUNCH_FX = { landed: false, spike: 0, boost: 0.014, decay: 7 };
 const PERF = {
   maxDpr: 1.5, // hard cap on device pixel ratio
   multisampling: 0, // MSAA inside the composer. 0 = off (cheapest); 2–4 = smoother
-  bloomLevels: 5, // mip levels of blur — each level is another pass
+  // Mip levels of blur. Each level is a downsample AND an upsample, so this is
+  // the single most expensive knob in the composer — 5 levels is ~10 full-screen
+  // passes on top of the five other effects. At the bloom radius used here the
+  // difference between 3 and 5 is not visible on the emissive bands, and the
+  // audience is on laptops with integrated graphics.
+  bloomLevels: 3,
   envResolution: 128, // cubemap res for the Lightformer environment
 };
 
@@ -906,7 +913,14 @@ function MiguelCharacter() {
     }
   }, [scene]);
 
-  useFrame((state, delta) => {
+  useFrame((state, delta) =>
+    perfProbe.time("character:frame", () => characterFrame(state, delta))
+  );
+
+  /* Extracted so the whole per-frame body can be timed as one unit. Timing
+     INSIDE a callback is safe — it is changing the useFrame PRIORITY that
+     would make R3F hand over rendering, and that is not happening here. */
+  function characterFrame(state: RootState, delta: number) {
     const t = state.clock.elapsedTime;
     const r = rig.current;
 
@@ -1210,7 +1224,7 @@ function MiguelCharacter() {
       if (pitch !== 0) bone.quaternion.multiply(_qDelta.setFromAxisAngle(X_AXIS, pitch));
       if (roll !== 0) bone.quaternion.multiply(_qDelta.setFromAxisAngle(Z_AXIS, roll));
     }
-  });
+  }
 
   // Outer group = beat-driven stage offset; inner group carries the body yaw
   // + idle motion. Auto-fit put feet at y=0.
@@ -1301,7 +1315,16 @@ function BeatDriver() {
   useFrame((_, delta) => {
     const beats = activeBeats.list;
     const maxIdx = beats.length - 1;
+
+    /* Raw beatPos, as it always was. Lenis eases the scroll POSITION, so this
+       already advances every frame; BEAT_DAMP below then smooths camera and
+       pose toward it, which is the arrangement the damping was tuned against.
+
+       A second damp was added here while the smooth-scroll layer was missing —
+       it helped, but two smoothing stages in series just add latency once the
+       input is continuous again. One mechanism, at the source. */
     const pos = THREE.MathUtils.clamp(scrollState.beatPos, 0, maxIdx);
+    scrollState.beatPosSmooth = pos;
     const i = Math.min(Math.floor(pos), Math.max(maxIdx - 1, 0));
     const a = beats[i];
     const b = beats[Math.min(i + 1, maxIdx)];
@@ -1479,6 +1502,42 @@ function CameraRig() {
   return null;
 }
 
+/* Feeds the perf probe one sample per frame. Renders nothing.
+
+   Priority is NEGATIVE so it runs ahead of the scene's own callbacks — and,
+   more importantly, so it stays out of the way: a positive priority makes R3F
+   hand rendering over to the caller, and a probe that changes how the page
+   draws is not measuring the page.
+
+   gl.info.render reports the PREVIOUS frame's draw calls, which is what we
+   want anyway: the frame whose interval we just measured. */
+function PerfSampler() {
+  const gl = useThree((s) => s.gl);
+
+  /* three.js clears info.render at the START of every render() call, and
+     EffectComposer renders once per pass. Reading it at the top of the next
+     frame therefore returned the LAST pass only — the fullscreen composite,
+     which is exactly 1 draw call and 1 triangle. That is what the first
+     recording reported, and it said nothing about the scene.
+
+     autoReset off makes the counters accumulate across every pass; we read the
+     whole frame's total and clear it ourselves. */
+  useEffect(() => {
+    if (!perfProbe.enabled) return;
+    gl.info.autoReset = false;
+    return () => {
+      gl.info.autoReset = true;
+    };
+  }, [gl]);
+
+  useFrame(() => {
+    perfProbe.frame(gl.info.render.calls, gl.info.render.triangles);
+    if (perfProbe.enabled) gl.info.reset();
+  }, -1000);
+
+  return null;
+}
+
 export default function Spider3D() {
   // Memoize camera so it isn't recreated each render.
   const camera = useMemo(
@@ -1503,7 +1562,8 @@ export default function Spider3D() {
         toneMapping: THREE.ACESFilmicToneMapping,
         toneMappingExposure: TONE.exposure,
       }}
-      dpr={[1, PERF.maxDpr]}
+      // ?dpr=1 pins it, to separate fill-rate cost from everything else.
+      dpr={DEBUG.dpr !== null ? DEBUG.dpr : [1, PERF.maxDpr]}
       camera={camera}
       style={{ width: "100%", height: "100%", pointerEvents: "none", background: "transparent" }}
     >
@@ -1547,11 +1607,16 @@ export default function Spider3D() {
         <MiguelCharacter />
       </Suspense>
 
+      <PerfSampler />
+
       {/* ── POST STACK: bloom (HDR emissive only) → lens CA → filmic tone map
           → grade → vignette. Order is the order they run. ── */}
-      {POST.enabled && (
+      {POST.enabled && !DEBUG.noPost && (
         <EffectComposer multisampling={PERF.multisampling}>
           <Bloom
+            // ?nobloom=1 drops the mip chain while keeping the merged effects,
+            // separating Bloom's cost from the rest of the stack.
+            enabled={!DEBUG.noBloom}
             mipmapBlur
             intensity={POST.bloom.intensity}
             luminanceThreshold={POST.bloom.threshold}

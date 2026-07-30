@@ -182,24 +182,23 @@ export const BEATS: Beat[] = [
   },
   {
     /* 3 ── THE VIDEO BREAK (the 40vh loader1.mp4 strip between events and
-       sponsors). That section has no id of its own and I'm not adding one,
-       so this selects it as the first `section` sibling AFTER #events —
-       NOT `#events + section` (adjacent-sibling), because a zero-height
-       `<div>` wrapping the "POW!" ComicStamp sits between them in page.tsx,
-       so `+` never matches and this beat silently dropped out of
-       `activeBeats` (console-warned, easy to miss). Losing it isn't just a
-       cosmetic gap: `resolveArms`/`punchDrive` key the whole wind-up-to-
-       landed punch off `pos > maxIdx − 1`, so with this beat gone `maxIdx`
-       drops from 3 to 2 and the ENTIRE punch sequence compresses into the
-       events→sponsors gap, firing the instant `pos` clears 1 — i.e. while
-       still on the "events" beat, before the six-card deck has even
-       scrolled past on a phone.
+       sponsors).
+
+       This used to be `#events + section` — "the section right after events" —
+       on the reasoning that the strip had no id and did not need one. It broke
+       silently when a zero-height div holding a decorative stamp was inserted
+       between the two: `+` matches only an IMMEDIATE sibling, so the selector
+       stopped resolving, ScrollRig dropped the beat with a console warning, and
+       the character interpolated straight from events to sponsors — skipping
+       the pose this entry exists to hold. The section now carries id
+       "interlude" and is matched by it. Positional selectors are broken by
+       edits made nowhere near them.
 
        Pure transit: he drifts back toward centre, arms dropping to a relaxed
        hang (armPose 4), glow dimming so the video reads. z20 because this
        strip is opaque black at layer 0 and the sponsors block right after it
        pins itself at z10. */
-    selector: "#events ~ section",
+    selector: "#interlude",
     id: "interlude",
     cam: [0, 1.8, 4.2],
     look: [-0.1, 1.6, 0],

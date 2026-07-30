@@ -9,6 +9,7 @@ import SplashScreen from "@/components/SplashScreen";
 import MiguelStage from "@/components/MiguelStage";
 import ComicStamp from "@/components/ComicStamp";
 import SpiderTracerIcon from "@/components/SpiderTracerIcon";
+import PerfHUD from "@/components/PerfHUD";
 
 /* ── LAZY LOOP VIDEO ──
    `loader1.mp4` (the events→sponsors interlude strip) is ~30MB — by far the
@@ -93,6 +94,9 @@ export default function EntryPortal() {
 
   return (
     <main className="bg-[#0A0A0A] w-full min-h-screen relative">
+      {/* Renders nothing unless the page is opened with ?debug=perf. */}
+      <PerfHUD />
+
       {!splashDone && <SplashScreen onComplete={() => setSplashDone(true)} />}
 
       {/* Miguel: one persistent 3D canvas that every section scrolls past.
@@ -126,6 +130,14 @@ export default function EntryPortal() {
             section, where they belong, instead of painting over the character
             passing in front of it. */}
         <section
+          // The "interlude" beat anchors on this. It used to be found by
+          // position — `#events + section` — which broke the moment the
+          // zero-height ComicStamp seam above was inserted between the two,
+          // because `+` needs an IMMEDIATE sibling. The beat was then dropped
+          // and the character interpolated straight from events to sponsors,
+          // skipping a pose he was authored to hold. An explicit id cannot be
+          // broken by rearranging what sits next to it.
+          id="interlude"
           className="relative w-full h-[40vh] overflow-hidden bg-[#0A0A0A] flex items-center justify-center"
           style={{ isolation: "isolate" }}
         >

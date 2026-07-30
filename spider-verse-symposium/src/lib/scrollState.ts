@@ -22,6 +22,21 @@ export type ScrollState = {
    * The 3D side interpolates BEATS[floor] → BEATS[ceil] with this.
    */
   beatPos: number;
+  /**
+   * `beatPos` eased toward, one frame at a time. THIS is what the visuals
+   * should read; `beatPos` is the target.
+   *
+   * `beatPos` is written only when a scroll event fires, and a mouse wheel
+   * delivers those as discrete jumps at 10–30Hz rather than smoothly at 60. So
+   * anything reading it directly snapped once per wheel notch and sat still in
+   * between — the camera and the character's placement both did, and it looked
+   * like the model was being knocked sideways repeatedly while scrolling, then
+   * settling the moment scrolling stopped.
+   *
+   * Written by BeatDriver, which owns the frame clock. Everything else reads
+   * it — including ImpactCrack, so the overlay and the 3D stay on one signal.
+   */
+  beatPosSmooth: number;
   /** Smoothed scroll velocity (px/frame-ish, sign = direction). Purely FYI. */
   velocity: number;
   /** Number of beat sections actually found in the DOM. */
@@ -106,6 +121,7 @@ export type ScrollState = {
 export const scrollState: ScrollState = {
   progress: 0,
   beatPos: 0,
+  beatPosSmooth: 0,
   velocity: 0,
   beatCount: 1,
   reducedMotion: false,
