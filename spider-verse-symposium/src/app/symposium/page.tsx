@@ -102,6 +102,11 @@ export default function Home() {
           >
             XPLORE&apos;26
           </p>
+          <p className="text-sm opacity-55 mb-3">
+            Loyola-ICAM College of Engineering and Technology,
+            <br />
+            Loyola College Campus, Nungambakkam, Chennai – 600034
+          </p>
           <p className="text-sm opacity-40">
             © 2026 XPLORE&apos;26. All dimensions reserved.
           </p>

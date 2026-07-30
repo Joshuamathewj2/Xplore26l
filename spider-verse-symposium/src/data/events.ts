@@ -159,6 +159,15 @@ export type DetailSection = {
   points: string[];
 };
 
+/* The campus every event runs on. Kept as one constant because the address
+   is repeated in each event's "Venue & Timing" block — a room number on its
+   own tells an inter-college participant nothing about where to turn up. */
+export const CAMPUS_ADDRESS =
+  "Loyola-ICAM College of Engineering and Technology, Loyola College Campus, Nungambakkam, Chennai – 600034";
+
+/** Room + campus, for the venue line of an event's details. */
+const venue = (room: string) => `${room} — ${CAMPUS_ADDRESS}`;
+
 /**
  * Fallback rules shown in the details dialog for any event without its own
  * entry in `EVENT_DETAILS_BY_TITLE` below (currently just the workshop).
@@ -275,6 +284,14 @@ export const EVENT_DETAILS_BY_TITLE: Record<string, DetailSection[]> = {
         "Contact organizers for any special requirements",
       ],
     },
+    {
+      heading: "Venue & Timing",
+      points: [venue("I22 & I23"), "9:30 AM – 12:30 PM"],
+    },
+    {
+      heading: "Student Coordinators",
+      points: ["Preethish — III CSE B", "Jefrin MSA — III CSE A"],
+    },
   ],
   "BEYOND THE WEB": [
     {
@@ -332,6 +349,14 @@ export const EVENT_DETAILS_BY_TITLE: Record<string, DetailSection[]> = {
         "Top 3 teams overall will receive prizes and certificates",
         "The judges' decision is final",
       ],
+    },
+    {
+      heading: "Venue & Timing",
+      points: [venue("I21"), "9:00 AM – 12:00 PM"],
+    },
+    {
+      heading: "Student Coordinators",
+      points: ["Goldwin R Jaffee — III CSE A", "Dhanushree — II CSE A"],
     },
   ],
   "MULTIVERSE BREACH": [
@@ -392,7 +417,14 @@ export const EVENT_DETAILS_BY_TITLE: Record<string, DetailSection[]> = {
         "Organizer decisions are final and cannot be challenged",
       ],
     },
-    { heading: "Venue", points: ["H22 (Lab)"] },
+    {
+      heading: "Venue & Timing",
+      points: [venue("H22 (Lab)"), "9:30 AM – 11:30 AM"],
+    },
+    {
+      heading: "Student Coordinators",
+      points: ["Mohammed Aasim T — III CSE B", "Tharsiga M — II CSE B"],
+    },
   ],
   "SPIDER SENSE": [
     {
@@ -440,10 +472,13 @@ export const EVENT_DETAILS_BY_TITLE: Record<string, DetailSection[]> = {
         "Participation implies acceptance of all rules stated above",
       ],
     },
-    { heading: "Venue", points: ["I11"] },
     {
-      heading: "Event Coordinators",
-      points: ["Thameemul Azarudeen N", "Pranathi J", "Ponram P", "Anish Joseph Leo R"],
+      heading: "Venue & Timing",
+      points: [venue("I11"), "12:30 PM – 2:00 PM"],
+    },
+    {
+      heading: "Student Coordinators",
+      points: ["Anish Joseph Leo — III CSE A", "Pranathi — III CSE B"],
     },
   ],
   "SPIDER SPRINT": [
@@ -495,10 +530,13 @@ export const EVENT_DETAILS_BY_TITLE: Record<string, DetailSection[]> = {
         "Any malpractice means instant disqualification, with no prior warning",
       ],
     },
-    { heading: "Venue", points: ["I11"] },
     {
-      heading: "Event Coordinators",
-      points: ["M Lathika Valli", "Abhijit", "Iyrin", "Ishithore"],
+      heading: "Venue & Timing",
+      points: [venue("I11"), "9:30 AM – 12:00 PM"],
+    },
+    {
+      heading: "Student Coordinators",
+      points: ["Abhijeet VS — III CSE A", "Lathika Valli M — III CSE B"],
     },
   ],
   "WEB FORGE": [
@@ -548,19 +586,29 @@ export const EVENT_DETAILS_BY_TITLE: Record<string, DetailSection[]> = {
         "No offensive, inappropriate or copyrighted content",
       ],
     },
+    {
+      heading: "Venue & Timing",
+      points: [venue("I23"), "12:00 PM – 2:00 PM"],
+    },
+    {
+      heading: "Student Coordinators",
+      points: ["Shreya Angelina — III CSE B", "Kevin Bosco — II CSE A"],
+    },
   ],
   "Full Stack Spider-Verse Workshop": [
     {
-      heading: "Conducted By",
+      // The timetable lists Rehaan as the student event coordinator and he is
+      // also the one running the session, so this is one section, not two.
+      heading: "Student Coordinator / Conducted By",
       points: ["Rehaan Rafael John — III CSE B"],
     },
     {
+      heading: "Venue & Timing",
+      points: [venue("A12"), "9:30 AM – 12:00 PM"],
+    },
+    {
       heading: "Workshop Info",
-      points: [
-        "Duration: 4 hours",
-        "Target audience: beginner to intermediate students",
-        "Venue: A12",
-      ],
+      points: ["Target audience: beginner to intermediate students"],
     },
     {
       heading: "Prerequisites",
@@ -632,7 +680,7 @@ export const EVENTS: EventItem[] = [
     title: "BEYOND THE WEB",
     subtitle: "DIMENSION 02",
     description:
-      "Present your paper, project or poster across the multiverse of knowledge. Showcase groundbreaking ideas to a panel of judges.",
+      "Technical research presentation. Teams of up to 3 — inter-college welcome — pitch a research paper, project, prototype or poster in 7 minutes, then defend it through 3 minutes of Q&A. Submit a one-page abstract under 250 words; only shortlisted teams present on 8th August, and the top 2 from each department go through to the finals.",
     palette: P_VENOM,
     image: charVenom,
     framing: { position: "58% 34%" },
