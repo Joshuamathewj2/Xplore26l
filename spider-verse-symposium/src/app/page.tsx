@@ -5,7 +5,6 @@ import Image from "next/image";
 import sponsorsHeading from "../../images/sponsors-heading.webp";
 import HeroSection from "@/components/HeroSection";
 import FeaturedEventsSection from "@/components/FeaturedEventsSection";
-import SplashScreen from "@/components/SplashScreen";
 import MiguelStage from "@/components/MiguelStage";
 import ComicStamp from "@/components/ComicStamp";
 import SponsorsPeekCharacter from "@/components/SponsorsPeekCharacter";
@@ -21,10 +20,6 @@ export default function EntryPortal() {
   const [isClicked, setIsClicked] = useState(false);
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
   const [isRevealed, setIsRevealed] = useState(false);
-  // The splash owns the very first beat: its zoom punches transparent holes
-  // through its own black overlay, so the reveal uncovers the portal itself
-  // rather than a stand-in. Everything below is mounted from the first paint.
-  const [splashDone, setSplashDone] = useState(false);
   const [removeOverlay, setRemoveOverlay] = useState(false);
   const redirectTriggered = useRef(false);
   const breakVideoRef = useRef<HTMLVideoElement>(null);
@@ -198,72 +193,108 @@ export default function EntryPortal() {
       {/* Renders nothing unless the page is opened with ?debug=perf. */}
       <PerfHUD />
 
-      {!splashDone && <SplashScreen onComplete={() => setSplashDone(true)} />}
-
       {/* CSS Animation definitions */}
       <style jsx global>{`
-        @keyframes portalGlow {
-          0%, 100% {
-            filter: drop-shadow(0 0 12px rgba(0, 150, 255, 0.75)) drop-shadow(0 0 25px rgba(0, 150, 255, 0.35));
-          }
-          50% {
-            filter: drop-shadow(0 0 12px rgba(0, 255, 102, 0.75)) drop-shadow(0 0 25px rgba(0, 255, 102, 0.35));
-          }
-        }
-
-        @keyframes portalGlowHover {
+        @keyframes portalGlitchHover {
           0% {
-            filter: drop-shadow(-4px 2px 0 rgba(255, 0, 85, 0.8)) drop-shadow(4px -2px 0 rgba(0, 229, 255, 0.8)) drop-shadow(0 0 15px rgba(0, 229, 255, 0.6));
+            filter: drop-shadow(-4px 2px 0 rgba(255, 0, 85, 0.8)) drop-shadow(4px -2px 0 rgba(0, 229, 255, 0.8));
             transform: translate(-3px, 1px) scale(1.02);
             clip-path: inset(15% 0 55% 0);
           }
           10% {
-            filter: drop-shadow(4px -2px 0 rgba(255, 0, 85, 0.8)) drop-shadow(-4px 2px 0 rgba(0, 229, 255, 0.8)) drop-shadow(0 0 15px rgba(0, 229, 255, 0.6));
+            filter: drop-shadow(4px -2px 0 rgba(255, 0, 85, 0.8)) drop-shadow(-4px 2px 0 rgba(0, 229, 255, 0.8));
             transform: translate(3px, -1px) scale(0.98);
             clip-path: inset(0 0 0 0);
           }
           20% {
-            filter: drop-shadow(0 0 15px rgba(0, 255, 102, 0.8));
+            filter: none;
             transform: translate(0, 0) scale(1);
             clip-path: inset(70% 0 5% 0);
           }
           30% {
-            filter: drop-shadow(-5px -2px 0 rgba(255, 0, 85, 0.8)) drop-shadow(5px 2px 0 rgba(0, 229, 255, 0.8)) drop-shadow(0 0 25px rgba(0, 229, 255, 0.8));
+            filter: drop-shadow(-5px -2px 0 rgba(255, 0, 85, 0.8)) drop-shadow(5px 2px 0 rgba(0, 229, 255, 0.8));
             transform: translate(-2px, -3px) scale(1.03);
             clip-path: inset(0 0 0 0);
           }
           40% {
-            filter: drop-shadow(0 0 15px rgba(0, 150, 255, 0.8));
+            filter: none;
             transform: translate(2px, 2px) scale(0.97);
             clip-path: inset(35% 0 45% 0);
           }
           50% {
-            filter: drop-shadow(-2px 3px 0 rgba(255, 0, 85, 0.8)) drop-shadow(2px -3px 0 rgba(0, 229, 255, 0.8)) drop-shadow(0 0 15px rgba(0, 229, 255, 0.6));
+            filter: drop-shadow(-2px 3px 0 rgba(255, 0, 85, 0.8)) drop-shadow(2px -3px 0 rgba(0, 229, 255, 0.8));
             transform: translate(-1px, 2px) scale(1.01);
             clip-path: inset(0 0 0 0);
           }
           60% {
-            filter: drop-shadow(0 0 20px rgba(0, 255, 102, 0.8));
+            filter: none;
             transform: translate(0, 0) scale(1);
             clip-path: inset(10% 0 75% 0);
           }
           70% {
-            filter: drop-shadow(-4px -2px 0 rgba(255, 0, 85, 0.8)) drop-shadow(4px 2px 0 rgba(0, 229, 255, 0.8)) drop-shadow(0 0 25px rgba(0, 229, 255, 0.8));
+            filter: drop-shadow(-4px -2px 0 rgba(255, 0, 85, 0.8)) drop-shadow(4px 2px 0 rgba(0, 229, 255, 0.8));
             transform: translate(3px, -2px) scale(1.02);
             clip-path: inset(0 0 0 0);
           }
           80% {
-            filter: drop-shadow(0 0 15px rgba(0, 150, 255, 0.8));
+            filter: none;
             transform: translate(-2px, 3px) scale(0.99);
             clip-path: inset(80% 0 2% 0);
           }
           90% {
-            filter: drop-shadow(-3px -1px 0 rgba(255, 0, 85, 0.8)) drop-shadow(3px 1px 0 rgba(0, 229, 255, 0.8)) drop-shadow(0 0 20px rgba(0, 229, 255, 0.7));
+            filter: drop-shadow(-3px -1px 0 rgba(255, 0, 85, 0.8)) drop-shadow(3px 1px 0 rgba(0, 229, 255, 0.8));
             transform: translate(1px, -1px) scale(1.01);
             clip-path: inset(0 0 0 0);
           }
           100% {
-            filter: drop-shadow(-4px 2px 0 rgba(255, 0, 85, 0.8)) drop-shadow(4px -2px 0 rgba(0, 229, 255, 0.8)) drop-shadow(0 0 15px rgba(0, 229, 255, 0.6));
+            filter: drop-shadow(-4px 2px 0 rgba(255, 0, 85, 0.8)) drop-shadow(4px -2px 0 rgba(0, 229, 255, 0.8));
+            transform: translate(-3px, 1px) scale(1.02);
+            clip-path: inset(15% 0 55% 0);
+          }
+        }
+
+        @keyframes titleGlitchHover {
+          0% {
+            transform: translate(-3px, 1px) scale(1.02);
+            clip-path: inset(15% 0 55% 0);
+          }
+          10% {
+            transform: translate(3px, -1px) scale(0.98);
+            clip-path: inset(0 0 0 0);
+          }
+          20% {
+            transform: translate(0, 0) scale(1);
+            clip-path: inset(70% 0 5% 0);
+          }
+          30% {
+            transform: translate(-2px, -3px) scale(1.03);
+            clip-path: inset(0 0 0 0);
+          }
+          40% {
+            transform: translate(2px, 2px) scale(0.97);
+            clip-path: inset(35% 0 45% 0);
+          }
+          50% {
+            transform: translate(-1px, 2px) scale(1.01);
+            clip-path: inset(0 0 0 0);
+          }
+          60% {
+            transform: translate(0, 0) scale(1);
+            clip-path: inset(10% 0 75% 0);
+          }
+          70% {
+            transform: translate(3px, -2px) scale(1.02);
+            clip-path: inset(0 0 0 0);
+          }
+          80% {
+            transform: translate(-2px, 3px) scale(0.99);
+            clip-path: inset(80% 0 2% 0);
+          }
+          90% {
+            transform: translate(1px, -1px) scale(1.01);
+            clip-path: inset(0 0 0 0);
+          }
+          100% {
             transform: translate(-3px, 1px) scale(1.02);
             clip-path: inset(15% 0 55% 0);
           }
@@ -279,36 +310,32 @@ export default function EntryPortal() {
         }
 
         .portal-base {
-          animation: portalGlow 5s ease-in-out infinite;
           transition: filter 0.5s ease;
         }
 
         .portal-base.hovered {
-          animation: portalGlowHover 0.3s linear infinite;
+          animation: portalGlitchHover 0.3s linear infinite;
         }
 
         .portal-base.clicked {
           animation: none;
-          filter: drop-shadow(0 0 35px #00E5FF) invert(1);
+          filter: invert(1);
         }
 
-        .text-glow {
-          text-shadow: 0 0 8px rgba(0, 229, 255, 0.8),
-                       0 0 20px rgba(0, 229, 255, 0.4);
-          transition: all 0.3s ease;
+        .title-base {
+          mix-blend-mode: screen;
+          filter: contrast(1.4) brightness(1.1);
+          transition: filter 0.5s ease;
         }
 
-        .text-glow:hover {
-          text-shadow: 0 0 15px rgba(0, 229, 255, 1),
-                       0 0 30px rgba(0, 229, 255, 0.7),
-                       0 0 45px rgba(0, 229, 255, 0.5);
-          letter-spacing: 0.18em;
+        .title-base.hovered {
+          animation: titleGlitchHover 0.3s linear infinite;
+          filter: contrast(1.4) brightness(1.1);
         }
 
-        .text-glow.clicked {
+        .title-base.clicked {
           animation: microJitter 0.1s infinite;
-          color: #e23636;
-          text-shadow: 0 0 20px #e23636, 0 0 40px #e23636;
+          filter: invert(1);
         }
       `}</style>
 
@@ -707,95 +734,103 @@ export default function EntryPortal() {
             onEnded={handleVideoEnded}
           />
 
-          {/* Portal UI Controls (Centered Stack) */}
+          {/* Full Screen Animated Spider Web GIF Background */}
+          {!isPlayingVideo && (
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                backgroundImage: "url('/web-loop.gif')",
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+                opacity: 0.5,
+                mixBlendMode: "screen",
+                zIndex: 12,
+              }}
+            />
+          )}
+
+           {/* Portal UI Controls (Centered Stack) */}
           <div 
-            className="relative flex flex-col items-center justify-center z-20 transition-opacity duration-300"
+            className="absolute inset-0 z-20 transition-opacity duration-300"
             style={{
               opacity: isPlayingVideo ? 0 : 1,
               pointerEvents: isPlayingVideo ? "none" : "auto",
             }}
           >
-            {!isPlayingVideo && (
-              <ComicStamp
-                text="THWIP!"
-                rotate={-11}
-                bg="var(--spider-red)"
-                shadow="var(--ink-black)"
-                style={{ top: "8%", right: "-4%", zIndex: 25 }}
-              />
-            )}
-
-            {/* Portal Wrapper (Clickable Area) */}
-            <button 
-              onClick={handleExploreClick}
-              onMouseEnter={() => setIsHovered(true)}
-              onMouseLeave={() => setIsHovered(false)}
-              className="relative w-[360px] h-[360px] md:w-[540px] md:h-[540px] flex items-center justify-center cursor-pointer outline-none border-none bg-transparent transition-transform active:scale-95"
-              aria-label="Enter portal"
-            >
-              {/* Static Portal Image (Base Layer) */}
-              <div 
-                className={`absolute inset-0 w-full h-full portal-base ${isHovered ? "hovered" : ""} ${isClicked ? "clicked" : ""}`}
-                style={{ 
-                  backgroundImage: "url('/portal.png')",
-                  backgroundSize: "contain",
-                  backgroundPosition: "center",
-                  backgroundRepeat: "no-repeat",
-                }}
-              />
-
-              {/* Glitching Overlay Layer */}
-              {isGlitching && (
+            {/* Center Container for Portal Button */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center justify-center">
+              {/* Portal Wrapper (Clickable Area) */}
+              <button 
+                onClick={handleExploreClick}
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
+                className="relative w-[360px] h-[360px] md:w-[540px] md:h-[540px] flex items-center justify-center cursor-pointer outline-none border-none bg-transparent transition-transform active:scale-95"
+                aria-label="Enter portal"
+              >
+                {/* Static Portal Image (Base Layer) */}
                 <div 
-                  className="absolute inset-0 w-full h-full pointer-events-none"
-                  style={{
+                  className={`absolute inset-0 w-full h-full portal-base ${isHovered ? "hovered" : ""} ${isClicked ? "clicked" : ""}`}
+                  style={{ 
                     backgroundImage: "url('/portal.png')",
                     backgroundSize: "contain",
                     backgroundPosition: "center",
                     backgroundRepeat: "no-repeat",
-                    mixBlendMode: "screen",
-                    ...glitchStyle,
                   }}
                 />
-              )}
-            </button>
 
-            {/* Explore 26 Button (Small gap of 12px/16px below portal button) */}
-            <div className="text-center mt-3 md:mt-4 z-30">
+                {/* Glitching Overlay Layer */}
+                {isGlitching && (
+                  <div 
+                    className="absolute inset-0 w-full h-full pointer-events-none"
+                    style={{
+                      backgroundImage: "url('/portal.png')",
+                      backgroundSize: "contain",
+                      backgroundPosition: "center",
+                      backgroundRepeat: "no-repeat",
+                      mixBlendMode: "screen",
+                      ...glitchStyle,
+                    }}
+                  />
+                )}
+              </button>
+            </div>
+
+            {/* Bottom Container for Custom Title Image */}
+            <div className="absolute bottom-[8vh] left-1/2 -translate-x-1/2 w-full flex justify-center">
               <button
                 onClick={handleExploreClick}
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
-                className={`text-glow select-none outline-none border-none bg-transparent cursor-pointer font-[var(--font-title)] text-[32px] md:text-[44px] uppercase tracking-[0.15em] ${isClicked ? "clicked scale-95" : "hover:scale-105 active:scale-95"}`}
+                className="relative outline-none border-none bg-transparent cursor-pointer select-none flex justify-center items-center"
                 style={{
-                  fontFamily: "var(--font-title)",
-                  color: "#00E5FF",
+                  maxWidth: "380px",
+                  width: "80%",
                 }}
+                aria-label="Explore 26"
               >
-                Explore 26
-              </button>
-            </div>
+                {/* Static base image */}
+                <img
+                  src="/xplorefont.png"
+                  alt="XPLORE 26"
+                  className={`title-base object-contain w-full h-auto ${isHovered ? "hovered" : ""} ${isClicked ? "clicked" : ""}`}
+                />
 
-            {/* Subtitle Snugly Underneath Explore 26 (Tight 6px gap) */}
-            <div className="mt-[6px] text-center px-4 z-30">
-              <h2 
-                className="text-white text-[10px] md:text-xs tracking-[0.25em] uppercase font-light opacity-80"
-                style={{
-                  fontFamily: "var(--font-body)",
-                  fontWeight: 300,
-                }}
-              >
-                Welcome to the Licet Universe
-              </h2>
+                {/* Glitching Overlay Layer */}
+                {isGlitching && (
+                  <img
+                    src="/xplorefont.png"
+                    alt="XPLORE 26 Glitch"
+                    className="absolute top-0 left-0 w-full h-auto object-contain pointer-events-none mix-blend-screen"
+                    style={glitchStyle}
+                  />
+                )}
+              </button>
             </div>
           </div>
 
-          {/* Atmospheric background gradient (behind portal UI, in front of video) */}
+          {/* Dotted texture background overlay */}
           {!isPlayingVideo && (
-            <>
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,10,20,0.4)_0%,rgba(0,0,0,1)_80%)] pointer-events-none z-15" />
-              <div className="absolute inset-0 halftone-bg opacity-5 pointer-events-none z-15" />
-            </>
+            <div className="absolute inset-0 halftone-bg opacity-10 pointer-events-none z-15" />
           )}
         </div>
       )}
