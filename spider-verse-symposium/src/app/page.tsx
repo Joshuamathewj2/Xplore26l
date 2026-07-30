@@ -8,328 +8,105 @@ import FeaturedEventsSection from "@/components/FeaturedEventsSection";
 import SplashScreen from "@/components/SplashScreen";
 import MiguelStage from "@/components/MiguelStage";
 import ComicStamp from "@/components/ComicStamp";
-import SponsorsPeekCharacter from "@/components/SponsorsPeekCharacter";
 import SpiderTracerIcon from "@/components/SpiderTracerIcon";
 import PerfHUD from "@/components/PerfHUD";
 
-export default function EntryPortal() {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const overlayRef = useRef<HTMLDivElement>(null);
-  const [isGlitching, setIsGlitching] = useState(false);
-  const [glitchStyle, setGlitchStyle] = useState({});
-  const [isHovered, setIsHovered] = useState(false);
-  const [isClicked, setIsClicked] = useState(false);
-  const [isPlayingVideo, setIsPlayingVideo] = useState(false);
-  const [isRevealed, setIsRevealed] = useState(false);
-  // The splash owns the very first beat: its zoom punches transparent holes
-  // through its own black overlay, so the reveal uncovers the portal itself
-  // rather than a stand-in. Everything below is mounted from the first paint.
-  const [splashDone, setSplashDone] = useState(false);
-  const [removeOverlay, setRemoveOverlay] = useState(false);
-  const redirectTriggered = useRef(false);
-  const breakVideoRef = useRef<HTMLVideoElement>(null);
+/* ── LAZY LOOP VIDEO ──
+   `loader1.mp4` (the events→sponsors interlude strip) is ~30MB — by far the
+   heaviest single asset on the page. With `autoPlay` + `preload="auto"` a
+   plain <video> starts pulling all 30MB the instant the page mounts,
+   competing with the hero video, the 3D model and every other above-the-fold
+   asset for the same connection — that's the biggest single contributor to
+   the site feeling laggy on first load, especially once actually hosted
+   (no local dev-server cache to hide it).
 
-  /* The ~30 MB video break loads and plays only while it is on screen.
-     It is well below the fold, so autoPlay + preload="auto" spent that
-     bandwidth — and the GPU time to decode it — during the hero's 3D warm-up,
-     which is where the scroll transition was losing frames.
+   `preload="none"` until an IntersectionObserver says the section is
+   actually about to be scrolled into view, so the byte cost is deferred to
+   the moment it's needed rather than paid up front by every visitor,
+   including the many who never scroll this far. `rootMargin` starts the
+   fetch a bit before the section is actually on screen so it still has time
+   to buffer before it's visible. */
+function LazyLoopVideo({
+  src,
+  className,
+  style,
+}: {
+  src: string;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  const ref = useRef<HTMLVideoElement>(null);
+  const [shouldLoad, setShouldLoad] = useState(false);
 
-     rootMargin starts the fetch a little before it scrolls in, so it is
-     playing by the time it is actually looked at; pausing on the way out stops
-     it decoding behind the rest of the page. */
   useEffect(() => {
-    const el = breakVideoRef.current;
-    if (!el) return;
-
+    const el = ref.current;
+    if (!el || shouldLoad) return;
     const io = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          void el.play().catch(() => {
-            /* Autoplay can be refused (battery saver, reduced data). The strip
-               is decorative, so a still frame is an acceptable outcome — what
-               is not acceptable is an unhandled rejection in the console. */
-          });
-        } else {
-          el.pause();
+          setShouldLoad(true);
+          io.disconnect();
         }
       },
-      { rootMargin: "200px 0px" }
+      { rootMargin: "800px 0px" }
     );
-
     io.observe(el);
     return () => io.disconnect();
-  }, []);
+  }, [shouldLoad]);
 
-  // Randomized glitch generator for the portal UI
+  // The `autoPlay` attribute only reliably starts playback when it's present
+  // at the moment the browser begins loading a resource — toggling it on an
+  // ALREADY-MOUNTED <video> via a React re-render (which is what happens
+  // here: `src` flips from undefined to the real URL on the same element)
+  // is not guaranteed to fire it. Measured: `readyState` reaches 4 (fully
+  // buffered) but the element stays paused. An explicit `.play()` once the
+  // source is actually assigned is the reliable trigger.
   useEffect(() => {
-    let active = true;
-
-    const triggerGlitch = () => {
-      if (!active || isClicked) return;
-
-      const nextDelay = Math.random() * 2500 + 1500;
-
-      setTimeout(() => {
-        if (!active || isClicked) return;
-
-        setIsGlitching(true);
-
-        const xOffset = (Math.random() - 0.5) * 16;
-        const yOffset = (Math.random() - 0.5) * 12;
-        const skewAngle = (Math.random() - 0.5) * 8;
-        const clipTop = Math.random() * 70;
-        const clipBottom = clipTop + Math.random() * 25 + 5;
-        const filterVal = `hue-rotate(${Math.random() * 360}deg) saturate(2)`;
-
-        setGlitchStyle({
-          transform: `translate(${xOffset}px, ${yOffset}px) skew(${skewAngle}deg)`,
-          clipPath: `inset(${clipTop}% 0 ${100 - clipBottom}% 0)`,
-          filter: filterVal,
-          opacity: 0.85,
-        });
-
-        const duration = Math.random() * 150 + 50;
-        setTimeout(() => {
-          if (!active) return;
-          setIsGlitching(false);
-          setGlitchStyle({});
-          
-          if (Math.random() > 0.6) {
-            setTimeout(() => {
-              if (!active || isClicked) return;
-              setIsGlitching(true);
-              const xOffset2 = (Math.random() - 0.5) * 20;
-              const yOffset2 = (Math.random() - 0.5) * 15;
-              const clipTop2 = Math.random() * 80;
-              const clipBottom2 = clipTop2 + Math.random() * 15;
-              setGlitchStyle({
-                transform: `translate(${xOffset2}px, ${yOffset2}px)`,
-                clipPath: `inset(${clipTop2}% 0 ${100 - clipBottom2}% 0)`,
-                filter: `invert(1) hue-rotate(180deg)`,
-                opacity: 0.7,
-              });
-              setTimeout(() => {
-                if (!active) return;
-                setIsGlitching(false);
-                setGlitchStyle({});
-                triggerGlitch();
-              }, 60);
-            }, 80);
-          } else {
-            triggerGlitch();
-          }
-        }, duration);
-
-      }, nextDelay);
-    };
-
-    triggerGlitch();
-
-    return () => {
-      active = false;
-    };
-  }, [isClicked]);
-
-  // Reveal the landing page by hiding/unmounting the video and loading overlays
-  const triggerReveal = () => {
-    if (redirectTriggered.current) return;
-    redirectTriggered.current = true;
-
-    // Hard Cut / Instant Hide: Set style to display none immediately to bypass React async delay
-    if (overlayRef.current) {
-      overlayRef.current.style.display = "none";
-    }
-    
-    setIsRevealed(true);
-    setRemoveOverlay(true);
-  };
-
-  // Click handler to trigger instant playback
-  const handleExploreClick = () => {
-    if (isClicked) return;
-    setIsClicked(true);
-    setIsPlayingVideo(true);
-
-    if (videoRef.current) {
-      videoRef.current.play().catch((err) => {
-        console.warn("Autoplay block or playback interruption: ", err);
-        // Fallback to immediate reveal if video completely fails to play
-        triggerReveal();
-      });
-    }
-
-    setIsGlitching(true);
-    setGlitchStyle({
-      transform: "scale(1.15) skew(15deg)",
-      filter: "hue-rotate(270deg) contrast(3) saturate(4)",
-      clipPath: "none",
+    if (!shouldLoad) return;
+    ref.current?.play().catch(() => {
+      // Autoplay can still be blocked by browser policy even when muted, in
+      // which case there's nothing to recover from here — it's a silent,
+      // paused loop instead of a crash.
     });
-  };
-
-  // Video play / time update / ended handlers
-  const handleVideoPlay = () => {
-    // 1.3s hard cap timer
-    const capTimer = setTimeout(() => {
-      triggerReveal();
-    }, 1300);
-
-    return () => clearTimeout(capTimer);
-  };
-
-  const handleVideoTimeUpdate = () => {
-    if (videoRef.current && videoRef.current.currentTime >= 1.3) {
-      triggerReveal();
-    }
-  };
-
-  const handleVideoEnded = () => {
-    triggerReveal();
-  };
+  }, [shouldLoad]);
 
   return (
-    <main
-      className="bg-[#0A0A0A] w-full min-h-screen relative"
-      style={{
-        height: isRevealed ? "auto" : "100vh",
-        overflowY: isRevealed ? "visible" : "hidden",
-        overflowX: "hidden",
-      }}
-    >
+    <video
+      ref={ref}
+      src={shouldLoad ? src : undefined}
+      autoPlay={shouldLoad}
+      loop
+      muted
+      playsInline
+      preload={shouldLoad ? "auto" : "none"}
+      className={className}
+      style={style}
+    />
+  );
+}
+
+export default function EntryPortal() {
+  // The splash owns the entire entrance beat: its zoom punches transparent
+  // holes through its own black overlay, so the reveal uncovers the site
+  // itself rather than a stand-in. Everything below is mounted from the
+  // first paint, and `splashDone` alone drives when it comes alive.
+  const [splashDone, setSplashDone] = useState(false);
+
+  return (
+    <main className="bg-[#0A0A0A] w-full min-h-screen relative">
       {/* Renders nothing unless the page is opened with ?debug=perf. */}
       <PerfHUD />
 
       {!splashDone && <SplashScreen onComplete={() => setSplashDone(true)} />}
 
-      {/* CSS Animation definitions */}
-      <style jsx global>{`
-        @keyframes portalGlow {
-          0%, 100% {
-            filter: drop-shadow(0 0 12px rgba(0, 150, 255, 0.75)) drop-shadow(0 0 25px rgba(0, 150, 255, 0.35));
-          }
-          50% {
-            filter: drop-shadow(0 0 12px rgba(0, 255, 102, 0.75)) drop-shadow(0 0 25px rgba(0, 255, 102, 0.35));
-          }
-        }
+      {/* Miguel: one persistent 3D canvas that every section scrolls past.
+          Lives INSIDE this wrapper so it shares a stacking context with the
+          sections it weaves through — see the z-index note in MiguelStage. */}
+      <MiguelStage start={splashDone} />
 
-        @keyframes portalGlowHover {
-          0% {
-            filter: drop-shadow(-4px 2px 0 rgba(255, 0, 85, 0.8)) drop-shadow(4px -2px 0 rgba(0, 229, 255, 0.8)) drop-shadow(0 0 15px rgba(0, 229, 255, 0.6));
-            transform: translate(-3px, 1px) scale(1.02);
-            clip-path: inset(15% 0 55% 0);
-          }
-          10% {
-            filter: drop-shadow(4px -2px 0 rgba(255, 0, 85, 0.8)) drop-shadow(-4px 2px 0 rgba(0, 229, 255, 0.8)) drop-shadow(0 0 15px rgba(0, 229, 255, 0.6));
-            transform: translate(3px, -1px) scale(0.98);
-            clip-path: inset(0 0 0 0);
-          }
-          20% {
-            filter: drop-shadow(0 0 15px rgba(0, 255, 102, 0.8));
-            transform: translate(0, 0) scale(1);
-            clip-path: inset(70% 0 5% 0);
-          }
-          30% {
-            filter: drop-shadow(-5px -2px 0 rgba(255, 0, 85, 0.8)) drop-shadow(5px 2px 0 rgba(0, 229, 255, 0.8)) drop-shadow(0 0 25px rgba(0, 229, 255, 0.8));
-            transform: translate(-2px, -3px) scale(1.03);
-            clip-path: inset(0 0 0 0);
-          }
-          40% {
-            filter: drop-shadow(0 0 15px rgba(0, 150, 255, 0.8));
-            transform: translate(2px, 2px) scale(0.97);
-            clip-path: inset(35% 0 45% 0);
-          }
-          50% {
-            filter: drop-shadow(-2px 3px 0 rgba(255, 0, 85, 0.8)) drop-shadow(2px -3px 0 rgba(0, 229, 255, 0.8)) drop-shadow(0 0 15px rgba(0, 229, 255, 0.6));
-            transform: translate(-1px, 2px) scale(1.01);
-            clip-path: inset(0 0 0 0);
-          }
-          60% {
-            filter: drop-shadow(0 0 20px rgba(0, 255, 102, 0.8));
-            transform: translate(0, 0) scale(1);
-            clip-path: inset(10% 0 75% 0);
-          }
-          70% {
-            filter: drop-shadow(-4px -2px 0 rgba(255, 0, 85, 0.8)) drop-shadow(4px 2px 0 rgba(0, 229, 255, 0.8)) drop-shadow(0 0 25px rgba(0, 229, 255, 0.8));
-            transform: translate(3px, -2px) scale(1.02);
-            clip-path: inset(0 0 0 0);
-          }
-          80% {
-            filter: drop-shadow(0 0 15px rgba(0, 150, 255, 0.8));
-            transform: translate(-2px, 3px) scale(0.99);
-            clip-path: inset(80% 0 2% 0);
-          }
-          90% {
-            filter: drop-shadow(-3px -1px 0 rgba(255, 0, 85, 0.8)) drop-shadow(3px 1px 0 rgba(0, 229, 255, 0.8)) drop-shadow(0 0 20px rgba(0, 229, 255, 0.7));
-            transform: translate(1px, -1px) scale(1.01);
-            clip-path: inset(0 0 0 0);
-          }
-          100% {
-            filter: drop-shadow(-4px 2px 0 rgba(255, 0, 85, 0.8)) drop-shadow(4px -2px 0 rgba(0, 229, 255, 0.8)) drop-shadow(0 0 15px rgba(0, 229, 255, 0.6));
-            transform: translate(-3px, 1px) scale(1.02);
-            clip-path: inset(15% 0 55% 0);
-          }
-        }
-
-        @keyframes microJitter {
-          0%, 100% { transform: translate(0, 0); }
-          10% { transform: translate(-0.5px, 0.5px); }
-          20% { transform: translate(0.5px, -0.5px); }
-          30% { transform: translate(-0.5px, -0.5px); }
-          40% { transform: translate(0.5px, 0.5px); }
-          50% { transform: translate(-0.5px, 0.5px); }
-        }
-
-        .portal-base {
-          animation: portalGlow 5s ease-in-out infinite;
-          transition: filter 0.5s ease;
-        }
-
-        .portal-base.hovered {
-          animation: portalGlowHover 0.3s linear infinite;
-        }
-
-        .portal-base.clicked {
-          animation: none;
-          filter: drop-shadow(0 0 35px #00E5FF) invert(1);
-        }
-
-        .text-glow {
-          text-shadow: 0 0 8px rgba(0, 229, 255, 0.8),
-                       0 0 20px rgba(0, 229, 255, 0.4);
-          transition: all 0.3s ease;
-        }
-
-        .text-glow:hover {
-          text-shadow: 0 0 15px rgba(0, 229, 255, 1),
-                       0 0 30px rgba(0, 229, 255, 0.7),
-                       0 0 45px rgba(0, 229, 255, 0.5);
-          letter-spacing: 0.18em;
-        }
-
-        .text-glow.clicked {
-          animation: microJitter 0.1s infinite;
-          color: #e23636;
-          text-shadow: 0 0 20px #e23636, 0 0 40px #e23636;
-        }
-      `}</style>
-
-      {/* 1. Main Hero Section Landing Page mounted in the background */}
-      <div 
-        style={{ 
-          opacity: isRevealed ? 1 : 0,
-          transition: "opacity 0.4s ease-in-out",
-          width: "100%",
-          minHeight: "100vh",
-          pointerEvents: isRevealed ? "auto" : "none",
-        }}
-      >
-        {/* Miguel: one persistent 3D canvas that every section scrolls past.
-            Lives INSIDE this wrapper so it shares a stacking context with the
-            sections it weaves through — see the z-index note in MiguelStage. */}
-        <MiguelStage start={isRevealed} />
-
-        {/* The hero holds its entrance until the portal actually uncovers it,
-            so the sequence isn't spent behind an opacity-0 wrapper. */}
-        <HeroSection start={isRevealed} />
+      {/* The hero holds its entrance until the splash hands over, so the
+          sequence isn't spent behind an opacity-0 wrapper. */}
+      <HeroSection start={splashDone} />
         <FeaturedEventsSection />
 
         {/* Zero-height seam: lets a decorative stamp straddle the boundary
@@ -379,21 +156,8 @@ export default function EntryPortal() {
             }}
           />
 
-          {/* preload="none" + play-on-visible, NOT autoPlay + preload="auto".
-              This clip is ~30 MB and sits well below the fold, but eager
-              preload fetched all of it the moment the page opened — during
-              exactly the window the hero's 3D scene is downloading its model
-              and warming up. Video decode and WebGL contend for the same GPU,
-              so the character's scroll transition stuttered on behalf of a
-              strip nobody had scrolled to yet. Now it costs nothing until it
-              is actually on screen. */}
-          <video
-            ref={breakVideoRef}
+          <LazyLoopVideo
             src="/loader1.mp4"
-            loop
-            muted
-            playsInline
-            preload="none"
             className="w-full h-full object-cover"
             style={{
               width: "100%",
@@ -448,7 +212,6 @@ export default function EntryPortal() {
             Partners across the multiverse
           </p>
           <div className="absolute inset-0 halftone-bg pointer-events-none" />
-          <SponsorsPeekCharacter />
         </section>
 
         {/* ── Event coordinators ──
@@ -674,131 +437,6 @@ export default function EntryPortal() {
             </p>
           </div>
         </footer>
-      </div>
-
-      {/* 2. Transition Overlays (Portal & Video) */}
-      {!removeOverlay && (
-        <div 
-          ref={overlayRef}
-          className="fixed inset-0 w-full h-full flex flex-col items-center justify-center bg-black transition-opacity duration-300 z-50 select-none"
-          style={{
-            opacity: isRevealed ? 0 : 1,
-            pointerEvents: isRevealed ? "none" : "auto",
-          }}
-        >
-          {/* Preloaded video element layered directly behind/beneath the portal UI */}
-          <video
-            ref={videoRef}
-            src="/loader.mp4"
-            preload="auto"
-            muted
-            playsInline
-            className="absolute inset-0 w-full h-full object-cover"
-            style={{
-              width: "100vw",
-              height: "100vh",
-              zIndex: 10,
-              opacity: isPlayingVideo ? 1 : 0,
-              pointerEvents: isPlayingVideo ? "auto" : "none",
-              backgroundColor: "#000000",
-            }}
-            onPlay={handleVideoPlay}
-            onTimeUpdate={handleVideoTimeUpdate}
-            onEnded={handleVideoEnded}
-          />
-
-          {/* Portal UI Controls (Centered Stack) */}
-          <div 
-            className="relative flex flex-col items-center justify-center z-20 transition-opacity duration-300"
-            style={{
-              opacity: isPlayingVideo ? 0 : 1,
-              pointerEvents: isPlayingVideo ? "none" : "auto",
-            }}
-          >
-            {!isPlayingVideo && (
-              <ComicStamp
-                text="THWIP!"
-                rotate={-11}
-                bg="var(--spider-red)"
-                shadow="var(--ink-black)"
-                style={{ top: "8%", right: "-4%", zIndex: 25 }}
-              />
-            )}
-
-            {/* Portal Wrapper (Clickable Area) */}
-            <button 
-              onClick={handleExploreClick}
-              onMouseEnter={() => setIsHovered(true)}
-              onMouseLeave={() => setIsHovered(false)}
-              className="relative w-[360px] h-[360px] md:w-[540px] md:h-[540px] flex items-center justify-center cursor-pointer outline-none border-none bg-transparent transition-transform active:scale-95"
-              aria-label="Enter portal"
-            >
-              {/* Static Portal Image (Base Layer) */}
-              <div 
-                className={`absolute inset-0 w-full h-full portal-base ${isHovered ? "hovered" : ""} ${isClicked ? "clicked" : ""}`}
-                style={{ 
-                  backgroundImage: "url('/portal.png')",
-                  backgroundSize: "contain",
-                  backgroundPosition: "center",
-                  backgroundRepeat: "no-repeat",
-                }}
-              />
-
-              {/* Glitching Overlay Layer */}
-              {isGlitching && (
-                <div 
-                  className="absolute inset-0 w-full h-full pointer-events-none"
-                  style={{
-                    backgroundImage: "url('/portal.png')",
-                    backgroundSize: "contain",
-                    backgroundPosition: "center",
-                    backgroundRepeat: "no-repeat",
-                    mixBlendMode: "screen",
-                    ...glitchStyle,
-                  }}
-                />
-              )}
-            </button>
-
-            {/* Explore 26 Button (Small gap of 12px/16px below portal button) */}
-            <div className="text-center mt-3 md:mt-4 z-30">
-              <button
-                onClick={handleExploreClick}
-                onMouseEnter={() => setIsHovered(true)}
-                onMouseLeave={() => setIsHovered(false)}
-                className={`text-glow select-none outline-none border-none bg-transparent cursor-pointer font-[var(--font-title)] text-[32px] md:text-[44px] uppercase tracking-[0.15em] ${isClicked ? "clicked scale-95" : "hover:scale-105 active:scale-95"}`}
-                style={{
-                  fontFamily: "var(--font-title)",
-                  color: "#00E5FF",
-                }}
-              >
-                Explore 26
-              </button>
-            </div>
-
-            {/* Subtitle Snugly Underneath Explore 26 (Tight 6px gap) */}
-            <div className="mt-[6px] text-center px-4 z-30">
-              <h2 
-                className="text-white text-[10px] md:text-xs tracking-[0.25em] uppercase font-light opacity-80"
-                style={{
-                  fontFamily: "var(--font-body)",
-                  fontWeight: 300,
-                }}
-              >
-                Welcome to the Licet Universe
-              </h2>
-            </div>
-          </div>
-
-          {/* Atmospheric background gradient (behind portal UI, in front of video) */}
-          {!isPlayingVideo && (
-            <>
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,10,20,0.4)_0%,rgba(0,0,0,1)_80%)] pointer-events-none z-15" />
-              <div className="absolute inset-0 halftone-bg opacity-5 pointer-events-none z-15" />
-            </>
-          )}
-        </div>
-      )}
     </main>
   );
 }

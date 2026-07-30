@@ -62,8 +62,6 @@ export default function HeroSection({ start = true }: { start?: boolean }) {
   const imageWrapRef = useRef<HTMLDivElement>(null);
   const ambientOrbRef = useRef<HTMLDivElement>(null);
   const sweepRef = useRef<HTMLDivElement>(null);
-  const webLeftRef = useRef<SVGSVGElement>(null);
-  const webRightRef = useRef<SVGSVGElement>(null);
   const titleSolidWrapRef = useRef<HTMLDivElement>(null);
   // Every title layer is rendered as two clipped halves so the wordmark can
   // fly together from opposite sides. Collected as arrays so one tween drives
@@ -100,15 +98,9 @@ export default function HeroSection({ start = true }: { start?: boolean }) {
     titleSolidY: gsap.QuickToFunc | null;
     titleStrokeX: gsap.QuickToFunc | null;
     titleStrokeY: gsap.QuickToFunc | null;
-    webLX: gsap.QuickToFunc | null;
-    webLY: gsap.QuickToFunc | null;
-    webRX: gsap.QuickToFunc | null;
-    webRY: gsap.QuickToFunc | null;
   }>({
     titleSolidX: null, titleSolidY: null,
     titleStrokeX: null, titleStrokeY: null,
-    webLX: null, webLY: null,
-    webRX: null, webRY: null,
   });
 
   // ──────────────────────────────────────────────
@@ -129,12 +121,6 @@ export default function HeroSection({ start = true }: { start?: boolean }) {
     s.titleSolidY?.(ny * 3);
     s.titleStrokeX?.(nx * 4);
     s.titleStrokeY?.(ny * 3);
-
-    // Web-line SVGs — smallest travel (±3px)
-    s.webLX?.(nx * -3);
-    s.webLY?.(ny * -2);
-    s.webRX?.(nx * 3);
-    s.webRY?.(ny * -2);
   }, []);
 
   useEffect(() => {
@@ -169,14 +155,6 @@ export default function HeroSection({ start = true }: { start?: boolean }) {
           gsap.quickTo(ambientOrbRef.current, "x", { duration: dur, ease });
           gsap.quickTo(ambientOrbRef.current, "y", { duration: dur, ease });
         }
-      if (webLeftRef.current) {
-        parallaxSetters.current.webLX = gsap.quickTo(webLeftRef.current, "x", { duration: dur, ease });
-        parallaxSetters.current.webLY = gsap.quickTo(webLeftRef.current, "y", { duration: dur, ease });
-      }
-      if (webRightRef.current) {
-        parallaxSetters.current.webRX = gsap.quickTo(webRightRef.current, "x", { duration: dur, ease });
-        parallaxSetters.current.webRY = gsap.quickTo(webRightRef.current, "y", { duration: dur, ease });
-      }
 
       window.addEventListener("mousemove", handleMouseMove);
     }
@@ -185,8 +163,6 @@ export default function HeroSection({ start = true }: { start?: boolean }) {
     //  REFERENCES FOR GSAP
     // ──────────────────────────────────────────────
     const section = sectionRef.current;
-    const webL = webLeftRef.current;
-    const webR = webRightRef.current;
     const titleSolid = titleSolidWrapRef.current;
     const titleStroke = titleStrokeWrapRef.current;
     const taglineCta = taglineCtaRef.current;
@@ -197,25 +173,6 @@ export default function HeroSection({ start = true }: { start?: boolean }) {
     const cornerTop = cornerTopRef.current;
     const cornerBot = cornerBottomRef.current;
 
-    // Collect all SVG lines/paths inside both web SVGs for stroke-dashoffset entrance
-    const webLLines: SVGGeometryElement[] = webL
-      ? Array.from(webL.querySelectorAll("line, path"))
-      : [];
-    const webRLines: SVGGeometryElement[] = webR
-      ? Array.from(webR.querySelectorAll("line, path"))
-      : [];
-
-    // Compute and set stroke-dasharray to total length so dashoffset can reveal
-    const prepareStroke = (el: SVGGeometryElement) => {
-      try {
-        const len = el.getTotalLength();
-        el.style.strokeDasharray = `${len}`;
-        el.style.strokeDashoffset = `${len}`;
-      } catch {
-        // Some paths might fail getTotalLength — safe to ignore
-      }
-    };
-
     // ──────────────────────────────────────────────
     //  1. ENTRANCE TIMELINE
     // ──────────────────────────────────────────────
@@ -224,9 +181,6 @@ export default function HeroSection({ start = true }: { start?: boolean }) {
       const simpleFade = gsap.timeline();
 
       // Make everything visible in place
-      [webL, webR].forEach((svg) => {
-        if (svg) gsap.set(svg, { opacity: 0 });
-      });
       if (titleSolid) gsap.set(titleSolid, { opacity: 0 });
       if (titleStroke) gsap.set(titleStroke, { opacity: 0 });
       if (character) gsap.set(character, { opacity: 0 });
@@ -236,12 +190,10 @@ export default function HeroSection({ start = true }: { start?: boolean }) {
       if (taglineCta) gsap.set(taglineCta, { opacity: 0 });
 
       simpleFade
-        .to([webL, webR, titleSolid, titleStroke, character].filter(Boolean), {
+        .to([titleSolid, titleStroke, character].filter(Boolean), {
           opacity: (i, target) => {
             // Character keeps its original 0.88 opacity
             if (target === character) return 0.88;
-            if (target === webL) return 0.4;
-            if (target === webR) return 0.35;
             return 1;
           },
           duration: 0.8,
@@ -263,10 +215,6 @@ export default function HeroSection({ start = true }: { start?: boolean }) {
     // ── FULL MOTION PATH ──
 
     // Prep: hide elements for entrance
-    if (webL) gsap.set(webL, { opacity: 0 });
-    if (webR) gsap.set(webR, { opacity: 0 });
-    webLLines.forEach(prepareStroke);
-    webRLines.forEach(prepareStroke);
     // Layer wrappers just fade; the split halves carry the movement.
     if (titleSolid) gsap.set(titleSolid, { opacity: 0 });
     if (titleStroke) gsap.set(titleStroke, { opacity: 0 });
@@ -310,26 +258,6 @@ export default function HeroSection({ start = true }: { start?: boolean }) {
     // the sequence itself only plays once `start` flips true.
     const entrance = gsap.timeline({ paused: true, delay: 0.1 });
     entranceRef.current = entrance;
-
-    // Step 1: Web SVGs — fade in + stroke-dashoffset draw (~0.8s)
-    entrance.to(webL, { opacity: 0.4, duration: 0.3, ease: "power2.out" }, 0);
-    entrance.to(webR, { opacity: 0.35, duration: 0.3, ease: "power2.out" }, 0.15);
-    if (webLLines.length) {
-      entrance.to(webLLines, {
-        strokeDashoffset: 0,
-        duration: 0.8,
-        ease: "power3.out",
-        stagger: 0.02,
-      }, 0);
-    }
-    if (webRLines.length) {
-      entrance.to(webRLines, {
-        strokeDashoffset: 0,
-        duration: 0.8,
-        ease: "power3.out",
-        stagger: 0.02,
-      }, 0.1);
-    }
 
     // Step 2: Title — layers become visible, then the halves fly together.
     entrance.to(
@@ -514,17 +442,6 @@ export default function HeroSection({ start = true }: { start?: boolean }) {
       .to(
         character,
         { opacity: 0, scale: 0.97, duration: 1, ease: "none" },
-        0
-      )
-      // Intensify web-line pulse (boost opacity of the energy pulse <g> elements)
-      .to(
-        webL,
-        { opacity: 0.8, duration: 0.4, ease: "none" },
-        0
-      )
-      .to(
-        webR,
-        { opacity: 0.7, duration: 0.4, ease: "none" },
         0
       )
       // Then fade entire hero out
@@ -713,128 +630,6 @@ export default function HeroSection({ start = true }: { start?: boolean }) {
             }}
           />
         ))}
-
-        {/* ── Web pattern SVG — LEFT ── */}
-        <svg
-          ref={webLeftRef}
-                    style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            height: "100%",
-            width: 480,
-            opacity: 0.4,
-            zIndex: 2,
-            pointerEvents: "none",
-            willChange: "transform, opacity",
-          }}
-          viewBox="0 0 400 900"
-          preserveAspectRatio="none"
-        >
-          {/* Base Web Structure */}
-          <g stroke="#F2EFE9" strokeWidth="0.8" opacity="0.4" fill="none">
-            <line x1="0" y1="0" x2="380" y2="450" />
-            <line x1="0" y1="0" x2="280" y2="560" />
-            <line x1="0" y1="0" x2="140" y2="680" />
-            <line x1="0" y1="0" x2="60" y2="800" />
-            <line x1="0" y1="0" x2="400" y2="330" />
-            <line x1="0" y1="0" x2="300" y2="220" />
-            <line x1="0" y1="0" x2="180" y2="170" />
-            <line x1="0" y1="0" x2="400" y2="560" />
-            <line x1="0" y1="0" x2="0" y2="900" />
-            <line x1="0" y1="0" x2="400" y2="120" />
-            <path d="M 35,85 Q 60,55 85,35" />
-            <path d="M 60,170 Q 115,115 170,60" />
-            <path d="M 85,260 Q 175,175 260,80" />
-            <path d="M 110,350 Q 230,230 350,110" />
-            <path d="M 40,460 Q 210,300 390,175" />
-            <path d="M 25,570 Q 175,410 345,270" />
-            <path d="M 20,680 Q 145,510 320,375" />
-            <path d="M 15,790 Q 120,615 285,465" />
-          </g>
-
-          {/* Animated Red Energy Pulses */}
-          <g
-            stroke="#E23636"
-            strokeWidth="1.8"
-            fill="none"
-            strokeLinecap="round"
-            style={{
-              strokeDasharray: "70 200",
-              animation: "webPulseRed 3.5s linear infinite",
-            }}
-          >
-            <line x1="0" y1="0" x2="380" y2="450" />
-            <line x1="0" y1="0" x2="280" y2="560" />
-            <line x1="0" y1="0" x2="400" y2="330" />
-            <line x1="0" y1="0" x2="180" y2="170" />
-            <line x1="0" y1="0" x2="400" y2="560" />
-            <path d="M 60,170 Q 115,115 170,60" />
-            <path d="M 110,350 Q 230,230 350,110" />
-            <path d="M 25,570 Q 175,410 345,270" />
-          </g>
-
-          {/* Animated Cyan Glitch Energy Pulses */}
-          <g
-            stroke="#00E5FF"
-            strokeWidth="1.2"
-            fill="none"
-            strokeLinecap="round"
-            style={{
-              strokeDasharray: "40 240",
-              animation: "webPulseCyan 4.5s 1.5s linear infinite",
-            }}
-          >
-            <line x1="0" y1="0" x2="140" y2="680" />
-            <line x1="0" y1="0" x2="300" y2="220" />
-            <line x1="0" y1="0" x2="400" y2="120" />
-            <path d="M 85,260 Q 175,175 260,80" />
-            <path d="M 40,460 Q 210,300 390,175" />
-            <path d="M 20,680 Q 145,510 320,375" />
-          </g>
-        </svg>
-
-        {/* ── Mirrored Right Corner Energy Web ── */}
-        <svg
-          ref={webRightRef}
-                    style={{
-            position: "absolute",
-            top: 0,
-            right: 0,
-            height: "100%",
-            width: 320,
-            opacity: 0.35,
-            zIndex: 2,
-            pointerEvents: "none",
-            transform: "scaleX(-1)",
-            willChange: "transform, opacity",
-          }}
-          viewBox="0 0 400 900"
-          preserveAspectRatio="none"
-        >
-          <g stroke="#F2EFE9" strokeWidth="0.7" opacity="0.3" fill="none">
-            <line x1="0" y1="0" x2="380" y2="450" />
-            <line x1="0" y1="0" x2="280" y2="560" />
-            <line x1="0" y1="0" x2="140" y2="680" />
-            <line x1="0" y1="0" x2="400" y2="330" />
-            <path d="M 85,260 Q 175,175 260,80" />
-            <path d="M 110,350 Q 230,230 350,110" />
-          </g>
-          <g
-            stroke="#E23636"
-            strokeWidth="1.5"
-            fill="none"
-            strokeLinecap="round"
-            style={{
-              strokeDasharray: "50 220",
-              animation: "webPulseRed 4s 0.8s linear infinite",
-            }}
-          >
-            <line x1="0" y1="0" x2="380" y2="450" />
-            <line x1="0" y1="0" x2="400" y2="330" />
-            <path d="M 110,350 Q 230,230 350,110" />
-          </g>
-        </svg>
 
         {/* ── Halftone dot texture ── */}
         <div
@@ -1265,34 +1060,7 @@ export default function HeroSection({ start = true }: { start?: boolean }) {
             pointerEvents: "none",
           }}
         />
-        {/* ── Web pulse animation keyframes ── */}
         <style>{`
-          @keyframes webPulseRed {
-            0% {
-              stroke-dashoffset: 540;
-              opacity: 0.2;
-            }
-            50% {
-              opacity: 0.95;
-            }
-            100% {
-              stroke-dashoffset: 0;
-              opacity: 0.2;
-            }
-          }
-          @keyframes webPulseCyan {
-            0% {
-              stroke-dashoffset: 560;
-              opacity: 0.15;
-            }
-            50% {
-              opacity: 0.85;
-            }
-            100% {
-              stroke-dashoffset: 0;
-              opacity: 0.15;
-            }
-          }
           .hero-cta-btn {
             display: inline-flex;
             align-items: center;
