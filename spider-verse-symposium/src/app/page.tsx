@@ -10,9 +10,10 @@ import ComicStamp from "@/components/ComicStamp";
 import SponsorsPeekCharacter from "@/components/SponsorsPeekCharacter";
 import SpiderTracerIcon from "@/components/SpiderTracerIcon";
 import PerfHUD from "@/components/PerfHUD";
+import ProceduralPortal from "@/components/ProceduralPortal";
+import SpiderWebTunnel from "@/components/SpiderWebTunnel";
 
 export default function EntryPortal() {
-  const videoRef = useRef<HTMLVideoElement>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
   const [isGlitching, setIsGlitching] = useState(false);
   const [glitchStyle, setGlitchStyle] = useState({});
@@ -145,40 +146,12 @@ export default function EntryPortal() {
     setIsClicked(true);
     setIsPlayingVideo(true);
 
-    if (videoRef.current) {
-      videoRef.current.play().catch((err) => {
-        console.warn("Autoplay block or playback interruption: ", err);
-        // Fallback to immediate reveal if video completely fails to play
-        triggerReveal();
-      });
-    }
-
     setIsGlitching(true);
     setGlitchStyle({
       transform: "scale(1.15) skew(15deg)",
       filter: "hue-rotate(270deg) contrast(3) saturate(4)",
       clipPath: "none",
     });
-  };
-
-  // Video play / time update / ended handlers
-  const handleVideoPlay = () => {
-    // 1.3s hard cap timer
-    const capTimer = setTimeout(() => {
-      triggerReveal();
-    }, 1300);
-
-    return () => clearTimeout(capTimer);
-  };
-
-  const handleVideoTimeUpdate = () => {
-    if (videoRef.current && videoRef.current.currentTime >= 1.3) {
-      triggerReveal();
-    }
-  };
-
-  const handleVideoEnded = () => {
-    triggerReveal();
   };
 
   return (
@@ -190,6 +163,10 @@ export default function EntryPortal() {
         overflowX: "hidden",
       }}
     >
+      {/* Preloading critical portal assets to prevent layout reflows and stutter on mount */}
+      <link rel="preload" href="./portal.webp" as="image" />
+      <link rel="preload" href="./xplorefont.webp" as="image" />
+
       {/* Renders nothing unless the page is opened with ?debug=perf. */}
       <PerfHUD />
 
@@ -713,38 +690,47 @@ export default function EntryPortal() {
             pointerEvents: isRevealed ? "none" : "auto",
           }}
         >
-          {/* Preloaded video element layered directly behind/beneath the portal UI */}
-          <video
-            ref={videoRef}
-            src="/loader.mp4"
-            preload="auto"
-            muted
-            playsInline
-            className="absolute inset-0 w-full h-full object-cover"
+          {/* Loader Background SVG overlay (Z-index: 0, fades in on button click) */}
+          <div
             style={{
+              position: "fixed",
+              inset: 0,
               width: "100vw",
               height: "100vh",
-              zIndex: 10,
+              zIndex: 0,
+              backgroundImage: "url('./loader_bg.svg')",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              backgroundRepeat: "no-repeat",
               opacity: isPlayingVideo ? 1 : 0,
-              pointerEvents: isPlayingVideo ? "auto" : "none",
-              backgroundColor: "#000000",
+              transition: "opacity 0.5s ease-in-out",
+              pointerEvents: "none",
             }}
-            onPlay={handleVideoPlay}
-            onTimeUpdate={handleVideoTimeUpdate}
-            onEnded={handleVideoEnded}
           />
 
-          {/* Full Screen Animated Spider Web GIF Background */}
-          {!isPlayingVideo && (
-            <div
-              className="absolute inset-0 pointer-events-none"
+          {/* Procedural WebGL/Canvas Portal opening animation */}
+          {isPlayingVideo && (
+            <ProceduralPortal
+              onComplete={triggerReveal}
               style={{
-                backgroundImage: "url('/web-loop.gif')",
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-                opacity: 0.5,
-                mixBlendMode: "screen",
-                zIndex: 12,
+                position: "absolute",
+                inset: 0,
+                width: "100vw",
+                height: "100vh",
+                zIndex: 10,
+              }}
+            />
+          )}
+
+          {/* Procedural SpiderWebTunnel Background */}
+          {!isPlayingVideo && (
+            <SpiderWebTunnel
+              style={{
+                position: "absolute",
+                inset: 0,
+                width: "100%",
+                height: "100%",
+                zIndex: 0,
               }}
             />
           )}
@@ -755,6 +741,9 @@ export default function EntryPortal() {
             style={{
               opacity: isPlayingVideo ? 0 : 1,
               pointerEvents: isPlayingVideo ? "none" : "auto",
+              willChange: "transform, opacity",
+              transform: "translateZ(0)",
+              backfaceVisibility: "hidden",
             }}
           >
             {/* Center Container for Portal Button */}
@@ -765,13 +754,18 @@ export default function EntryPortal() {
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
                 className="relative w-[360px] h-[360px] md:w-[540px] md:h-[540px] flex items-center justify-center cursor-pointer outline-none border-none bg-transparent transition-transform active:scale-95"
+                style={{
+                  willChange: "transform",
+                  transform: "translateZ(0)",
+                  backfaceVisibility: "hidden",
+                }}
                 aria-label="Enter portal"
               >
                 {/* Static Portal Image (Base Layer) */}
                 <div 
                   className={`absolute inset-0 w-full h-full portal-base ${isHovered ? "hovered" : ""} ${isClicked ? "clicked" : ""}`}
                   style={{ 
-                    backgroundImage: "url('/portal.png')",
+                    backgroundImage: "url('./portal.webp')",
                     backgroundSize: "contain",
                     backgroundPosition: "center",
                     backgroundRepeat: "no-repeat",
@@ -783,7 +777,7 @@ export default function EntryPortal() {
                   <div 
                     className="absolute inset-0 w-full h-full pointer-events-none"
                     style={{
-                      backgroundImage: "url('/portal.png')",
+                      backgroundImage: "url('./portal.webp')",
                       backgroundSize: "contain",
                       backgroundPosition: "center",
                       backgroundRepeat: "no-repeat",
@@ -805,23 +799,31 @@ export default function EntryPortal() {
                 style={{
                   maxWidth: "380px",
                   width: "80%",
+                  height: "120px", // Reserve height before image loads
+                  willChange: "transform",
+                  transform: "translateZ(0)",
+                  backfaceVisibility: "hidden",
                 }}
                 aria-label="Explore 26"
               >
                 {/* Static base image */}
                 <img
-                  src="/xplorefont.png"
+                  src="./xplorefont.webp"
                   alt="XPLORE 26"
                   className={`title-base object-contain w-full h-auto ${isHovered ? "hovered" : ""} ${isClicked ? "clicked" : ""}`}
+                  width={380}
+                  height={120}
                 />
 
                 {/* Glitching Overlay Layer */}
                 {isGlitching && (
                   <img
-                    src="/xplorefont.png"
+                    src="./xplorefont.webp"
                     alt="XPLORE 26 Glitch"
                     className="absolute top-0 left-0 w-full h-auto object-contain pointer-events-none mix-blend-screen"
                     style={glitchStyle}
+                    width={380}
+                    height={120}
                   />
                 )}
               </button>
