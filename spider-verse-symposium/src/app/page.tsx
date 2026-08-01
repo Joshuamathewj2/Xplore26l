@@ -7,6 +7,7 @@ import HeroSection from "@/components/HeroSection";
 import FeaturedEventsSection from "@/components/FeaturedEventsSection";
 import MiguelStage from "@/components/MiguelStage";
 import ComicStamp from "@/components/ComicStamp";
+import SplashScreen from "@/components/SplashScreen";
 import SponsorsPeekCharacter from "@/components/SponsorsPeekCharacter";
 import SpiderTracerIcon from "@/components/SpiderTracerIcon";
 import PerfHUD from "@/components/PerfHUD";
