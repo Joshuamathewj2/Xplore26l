@@ -14,7 +14,6 @@ import eventsHeading from "../../images/events-heading.webp";
 import { EVENTS, WORKSHOPS, type EventItem } from "@/data/events";
 import EventCard from "./EventCard";
 import EventsHeadingSpider from "./EventsHeadingSpider";
-import EventsCornerWeb from "./EventsCornerWeb";
 import EventDetailsModal from "./EventDetailsModal";
 import EventsCarousel3D, { STAGE_HEIGHT, STAGE_SCALE } from "./EventsCarousel3D";
 
@@ -207,13 +206,6 @@ export default function FeaturedEventsSection() {
           pointerEvents: "none",
         }}
       />
-
-      {/* ── Corner web ──
-          A spider spinning and re-spinning an orb web anchored in the
-          top-right corner, in the same z-band (6) the removed Miles
-          cutout used to occupy — above the ben-day screen and colour
-          blocks, under the carousel (z10). */}
-      <EventsCornerWeb />
 
       {/* ── Section Heading ── */}
       <div

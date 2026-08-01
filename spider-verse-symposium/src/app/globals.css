@@ -988,4 +988,34 @@ body {
   #events {
     padding: 56px 0 60px !important;
   }
+
+  /* Event details dialog: the poster/register column and the rules column
+     sit side by side as a flex row. Its `min-width: 280` floor left the
+     rules column only ~60-80px wide on a phone, so every rule wrapped down
+     to a few characters per line and the heading wrapped one word per line.
+     Stack them instead, and let the whole dialog scroll as one column. */
+  .event-modal__panel {
+    flex-direction: column !important;
+    width: 100% !important;
+    max-height: 92vh !important;
+    overflow-y: auto !important;
+  }
+
+  .event-modal__poster-col {
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 200px !important;
+    flex-shrink: 0 !important;
+    border-right: none !important;
+    border-bottom: 5px solid rgba(0, 0, 0, 0.55) !important;
+  }
+
+  /* This list had its own independent scroller (`flex:1; min-height:0`)
+     for the side-by-side layout; stacked, the outer panel scrolls instead,
+     so let the list grow to its natural height. */
+  .event-modal__rules {
+    flex: none !important;
+    min-height: auto !important;
+    overflow-y: visible !important;
+  }
 }

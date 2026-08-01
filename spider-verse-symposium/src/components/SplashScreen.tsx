@@ -46,10 +46,11 @@ const EYES = [
 
 type Phase = "opening" | "looking" | "zooming" | "completed";
 
+// Total 4s exactly, with no skip available to shortcut it.
 const DURATION: Record<Exclude<Phase, "completed">, number> = {
-  opening: 1400,
-  looking: 2400,
-  zooming: 1150,
+  opening: 1100,
+  looking: 1950,
+  zooming: 950,
 };
 const NEXT_PHASE: Record<Exclude<Phase, "completed">, Phase> = {
   opening: "looking",
@@ -124,9 +125,12 @@ const strokeMotion: Variants = {
   opening: {
     pathLength: 1,
     opacity: 1,
+    // Scaled to the shortened opening phase (was 1.15/0.3 against a 1.4s
+    // phase) — otherwise the stroke-draw gets truncated mid-line when the
+    // phase timer below advances before Framer finishes it.
     transition: {
-      pathLength: { duration: 1.15, ease: "easeInOut" },
-      opacity: { duration: 0.3 },
+      pathLength: { duration: DURATION.opening / 1000 - 0.15, ease: "easeInOut" },
+      opacity: { duration: 0.2 },
     },
   },
   looking: { pathLength: 1, opacity: 1 },
@@ -138,7 +142,9 @@ const strokeMotion: Variants = {
    a sharp red rule around a dark pupil before it flares white. */
 const shadeFillMotion: Variants = {
   initial: { opacity: 0 },
-  opening: { opacity: 0.9, transition: { duration: 1, delay: 0.3 } },
+  // Scaled the same way as strokeMotion.opening above — delay 0.3s + duration
+  // 1s (1.3s total) no longer fits inside the shortened 0.95s opening phase.
+  opening: { opacity: 0.9, transition: { duration: 0.55, delay: 0.15 } },
   looking: { opacity: 1 },
   zooming: { opacity: 0, transition: { duration: 0.35 } },
   completed: { opacity: 0 },
@@ -200,11 +206,26 @@ export default function SplashScreen({ onComplete }: { onComplete?: () => void }
   const prefersReducedMotion = useReducedMotion();
   const done = useRef(false);
 
+  // `onComplete` is passed as an inline arrow from the page (`() =>
+  // setSplashDone(true)`), which is a fresh function identity on every
+  // parent re-render — and the entry portal re-renders often (its own
+  // random glitch-flicker timer touches state every 1.5-4s). Reading it
+  // through a ref, rather than depending on it directly, keeps `finish` —
+  // and therefore the phase-timer effect below — stable across those
+  // re-renders. Without this, the effect's cleanup fired mid-phase on every
+  // parent re-render and restarted that phase's `setTimeout` from zero,
+  // which is what let the "zooming" phase get reset repeatedly and blew the
+  // total sequence past 5s instead of the intended ~3.4s.
+  const onCompleteRef = useRef(onComplete);
+  useEffect(() => {
+    onCompleteRef.current = onComplete;
+  });
+
   const finish = useCallback(() => {
     if (done.current) return;
     done.current = true;
-    onComplete?.();
-  }, [onComplete]);
+    onCompleteRef.current?.();
+  }, []);
 
   // Drive the state machine: opening -> looking -> zooming -> completed.
   useEffect(() => {
@@ -223,19 +244,6 @@ export default function SplashScreen({ onComplete }: { onComplete?: () => void }
     const id = setTimeout(() => setPhase(NEXT_PHASE[phase]), DURATION[phase]);
     return () => clearTimeout(id);
   }, [phase, prefersReducedMotion, finish]);
-
-  // Let the viewer bail out early — jumps straight to the wipe.
-  const skip = useCallback(() => {
-    setPhase((p) => (p === "zooming" || p === "completed" ? p : "zooming"));
-  }, []);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" || e.key === " " || e.key === "Enter") skip();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [skip]);
 
   // non-scaling-stroke pins the outline to device pixels, so a fixed width would
   // read as a hairline on a desktop lens and swallow a phone one. Track the
@@ -269,9 +277,10 @@ export default function SplashScreen({ onComplete }: { onComplete?: () => void }
     <div
       className="fixed inset-0 overflow-hidden"
       // Above the global noise overlay and the hero's fixed frame, both at 9999.
-      style={{ zIndex: 10000 }}
+      // will-change promotes this to its own compositor layer up front, so the
+      // first scale/opacity tween isn't also paying for the promotion.
+      style={{ zIndex: 10000, willChange: "transform, opacity" }}
       role="presentation"
-      onClick={skip}
     >
       {/* ---- Layer 1: black overlay with the lenses punched out of it ---- */}
       <svg
@@ -336,18 +345,6 @@ export default function SplashScreen({ onComplete }: { onComplete?: () => void }
           </LensPair>
         </motion.g>
       </svg>
-
-      {/* ---- Skip ---- */}
-      <motion.button
-        type="button"
-        onClick={skip}
-        className="absolute bottom-6 right-6 rounded-full border border-white/20 px-4 py-1.5 text-[11px] font-medium uppercase tracking-[0.2em] text-white/60 transition hover:border-white/40 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: phase === "zooming" ? 0 : 1 }}
-        transition={{ duration: 0.4, delay: phase === "opening" ? 1.2 : 0 }}
-      >
-        Skip
-      </motion.button>
     </div>
   );
 }
