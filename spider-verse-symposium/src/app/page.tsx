@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import sponsorsHeading from "../../images/sponsors-heading.webp";
+import SplashScreen from "@/components/SplashScreen";
 import HeroSection from "@/components/HeroSection";
 import FeaturedEventsSection from "@/components/FeaturedEventsSection";
 import MiguelStage from "@/components/MiguelStage";
