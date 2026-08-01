@@ -159,6 +159,15 @@ export type DetailSection = {
   points: string[];
 };
 
+/* The campus every event runs on. Kept as one constant because the address
+   is repeated in each event's "Venue & Timing" block — a room number on its
+   own tells an inter-college participant nothing about where to turn up. */
+export const CAMPUS_ADDRESS =
+  "Loyola-ICAM College of Engineering and Technology, Loyola College Campus, Nungambakkam, Chennai – 600034";
+
+/** Room + campus, for the venue line of an event's details. */
+const venue = (room: string) => `${room} — ${CAMPUS_ADDRESS}`;
+
 /**
  * Fallback rules shown in the details dialog for any event without its own
  * entry in `EVENT_DETAILS_BY_TITLE` below (currently just the workshop).
@@ -219,11 +228,11 @@ export const EVENT_DETAILS: DetailSection[] = [
 ];
 
 /**
- * Real per-event rules, keyed by `EventItem.title`. Sourced from the
- * official "All Events Rules and Regulations" document — headings follow
- * each event's own doc rather than being forced into one shared shape.
- * Look up via `getEventDetails`, which falls back to `EVENT_DETAILS` for
- * anything not listed here (currently just the workshop).
+ * Real per-event/workshop rules, keyed by `EventItem.title`. Sourced from the
+ * official "All Events Rules and Regulations" document (and the workshop
+ * brief) — headings follow each entry's own doc rather than being forced
+ * into one shared shape. Look up via `getEventDetails`, which falls back to
+ * `EVENT_DETAILS` for anything not listed here.
  */
 export const EVENT_DETAILS_BY_TITLE: Record<string, DetailSection[]> = {
   "ACROSS THE SPIDERVERSE": [
@@ -275,48 +284,79 @@ export const EVENT_DETAILS_BY_TITLE: Record<string, DetailSection[]> = {
         "Contact organizers for any special requirements",
       ],
     },
+    {
+      heading: "Venue & Timing",
+      points: [venue("I22 & I23"), "9:30 AM – 12:30 PM"],
+    },
+    {
+      heading: "Student Coordinators",
+      points: ["Preethish — III CSE B", "Jefrin MSA — III CSE A"],
+    },
   ],
   "BEYOND THE WEB": [
     {
-      heading: "General Guidelines",
+      heading: "Building Rules",
       points: [
-        "Open to teams of 2–3 members",
-        "Present a Paper, Project or Poster based on your chosen category",
-        "All submissions must be original — plagiarism means immediate disqualification",
-        "Papers require a minimum of 15 pages; presentations are limited to 7–8 slides",
-        "Each team gets 7 minutes total: 5 for the presentation, 2 for Q&A",
-        "Submit your paper, abstract, poster or presentation before the deadline",
-        "The judges' decision is final and binding",
+        "Maximum 3 participants per team",
+        "Inter-college teams are allowed",
+        "One participant can join only one team",
+        "Categories: Research Paper, Project, Prototype, or Poster",
       ],
     },
     {
       heading: "Winning Criteria",
       points: [
-        "Innovation & Originality",
-        "Technical Knowledge",
-        "Relevance of the Topic",
+        "Technical Innovation",
+        "Problem & Solution",
+        "Methodology",
+        "Results",
         "Presentation Skills",
-        "Practical Application",
-        "Response to Judges' Questions",
-        "Time Management",
+        "Q&A Performance",
       ],
     },
     {
-      heading: "Event Specific Rules",
+      heading: "General Rules",
       points: [
-        "Paper Presentation: minimum 15-page paper, maximum 7–8 slides",
-        "Project Presentation: explain objective, methodology, implementation and results — a working prototype is preferred",
-        "Poster Presentation: present your idea clearly and be ready to explain it during evaluation",
+        "Carry your College ID Card",
+        "Shortlisted teams will present on 8th August",
+        "Teams with prototypes must arrange their own demonstration setup",
+        "Abstract should not exceed 250 words",
+      ],
+    },
+    {
+      heading: "Event Specific",
+      points: [
+        "Research Paper: IEEE format preferred, 6–15 pages with one-page abstract",
+        "Project/Prototype: Report of 3–10 pages with one-page abstract",
+        "Poster: A1/A2 size (digital copy in PDF to be submitted) with a one-page abstract",
+        "Presentation: 7 minutes + 3 minutes Q&A",
       ],
     },
     {
       heading: "Code of Conduct",
       points: [
-        "Maintain professionalism and respect toward judges, volunteers and fellow participants",
-        "Plagiarism or academic misconduct results in immediate disqualification",
-        "Offensive, inappropriate or disruptive behavior will not be tolerated",
-        "Follow all instructions from the event coordinators",
+        "Maintain professional and respectful behavior",
+        "Submit original work only",
+        "Adhere to the general guidelines",
+        "Any misconduct may lead to disqualification",
       ],
+    },
+    {
+      heading: "Important Notes",
+      points: [
+        "Only shortlisted teams will present",
+        "Top 2 teams from each department qualify for the finals",
+        "Top 3 teams overall will receive prizes and certificates",
+        "The judges' decision is final",
+      ],
+    },
+    {
+      heading: "Venue & Timing",
+      points: [venue("I21"), "9:00 AM – 12:00 PM"],
+    },
+    {
+      heading: "Student Coordinators",
+      points: ["Goldwin R Jaffee — III CSE A", "Dhanushree — II CSE A"],
     },
   ],
   "MULTIVERSE BREACH": [
@@ -377,7 +417,14 @@ export const EVENT_DETAILS_BY_TITLE: Record<string, DetailSection[]> = {
         "Organizer decisions are final and cannot be challenged",
       ],
     },
-    { heading: "Venue", points: ["H22 (Lab)"] },
+    {
+      heading: "Venue & Timing",
+      points: [venue("H22 (Lab)"), "9:30 AM – 11:30 AM"],
+    },
+    {
+      heading: "Student Coordinators",
+      points: ["Mohammed Aasim T — III CSE B", "Tharsiga M — II CSE B"],
+    },
   ],
   "SPIDER SENSE": [
     {
@@ -425,10 +472,13 @@ export const EVENT_DETAILS_BY_TITLE: Record<string, DetailSection[]> = {
         "Participation implies acceptance of all rules stated above",
       ],
     },
-    { heading: "Venue", points: ["I11"] },
     {
-      heading: "Event Coordinators",
-      points: ["Thameemul Azarudeen N", "Pranathi J", "Ponram P", "Anish Joseph Leo R"],
+      heading: "Venue & Timing",
+      points: [venue("I11"), "12:30 PM – 2:00 PM"],
+    },
+    {
+      heading: "Student Coordinators",
+      points: ["Anish Joseph Leo — III CSE A", "Pranathi — III CSE B"],
     },
   ],
   "SPIDER SPRINT": [
@@ -480,10 +530,13 @@ export const EVENT_DETAILS_BY_TITLE: Record<string, DetailSection[]> = {
         "Any malpractice means instant disqualification, with no prior warning",
       ],
     },
-    { heading: "Venue", points: ["I11"] },
     {
-      heading: "Event Coordinators",
-      points: ["M Lathika Valli", "Abhijit", "Iyrin", "Ishithore"],
+      heading: "Venue & Timing",
+      points: [venue("I11"), "9:30 AM – 12:00 PM"],
+    },
+    {
+      heading: "Student Coordinators",
+      points: ["Abhijeet VS — III CSE A", "Lathika Valli M — III CSE B"],
     },
   ],
   "WEB FORGE": [
@@ -533,6 +586,75 @@ export const EVENT_DETAILS_BY_TITLE: Record<string, DetailSection[]> = {
         "No offensive, inappropriate or copyrighted content",
       ],
     },
+    {
+      heading: "Venue & Timing",
+      points: [venue("I23"), "12:00 PM – 2:00 PM"],
+    },
+    {
+      heading: "Student Coordinators",
+      points: ["Shreya Angelina — III CSE B", "Kevin Bosco — II CSE A"],
+    },
+  ],
+  "Full Stack Spider-Verse Workshop": [
+    {
+      // The timetable lists Rehaan as the student event coordinator and he is
+      // also the one running the session, so this is one section, not two.
+      heading: "Student Coordinator / Conducted By",
+      points: ["Rehaan Rafael John — III CSE B"],
+    },
+    {
+      heading: "Venue & Timing",
+      points: [venue("A12"), "9:30 AM – 12:00 PM"],
+    },
+    {
+      heading: "Workshop Info",
+      points: ["Target audience: beginner to intermediate students"],
+    },
+    {
+      heading: "Prerequisites",
+      points: [
+        "Basic programming knowledge (variables, loops, functions)",
+        "No prior web development experience required",
+      ],
+    },
+    {
+      heading: "To Bring",
+      points: ["Laptop and charger"],
+    },
+    {
+      heading: "Learning Objectives",
+      points: [
+        "What Full Stack actually means",
+        "How the frontend talks to the backend",
+        "REST APIs",
+        "Authentication",
+        "Databases",
+        "AI integration",
+        "Deployment",
+        "Real developer workflow",
+      ],
+    },
+    {
+      heading: "Project: Campus Event Registration Portal",
+      points: [
+        "Login",
+        "View events",
+        "Register for events",
+        "See your registrations",
+        "Ask an AI assistant about events",
+      ],
+    },
+    {
+      heading: "Tech Stack",
+      points: [
+        "Frontend — Next.js 15, React, Tailwind CSS, TypeScript",
+        "Authentication — Clerk",
+        "Database — Supabase",
+        "AI backend — FastAPI",
+        "AI — Gemini API",
+        "Hosting — Vercel",
+      ],
+    },
   ],
 };
 
@@ -558,7 +680,7 @@ export const EVENTS: EventItem[] = [
     title: "BEYOND THE WEB",
     subtitle: "DIMENSION 02",
     description:
-      "Present your paper, project or poster across the multiverse of knowledge. Showcase groundbreaking ideas to a panel of judges.",
+      "Technical research presentation. Teams of up to 3 — inter-college welcome — pitch a research paper, project, prototype or poster in 7 minutes, then defend it through 3 minutes of Q&A. Submit a one-page abstract under 250 words; only shortlisted teams present on 8th August, and the top 2 from each department go through to the finals.",
     palette: P_VENOM,
     image: charVenom,
     framing: { position: "58% 34%" },
@@ -620,21 +742,17 @@ export const EVENTS: EventItem[] = [
 
    Deliberately an ARRAY holding one entry rather than a bare object: there
    is one workshop this year, and the tab in FeaturedEventsSection already
-   maps over it, so adding a second is a data edit and nothing else.
-
-   >>> TITLE, DESCRIPTION AND registerUrl ARE PLACEHOLDERS <<<
-   Drop the real workshop name, blurb and Google Form link in here. The card
-   renders a live Register button, so the URL below currently opens the
-   events landing form — replace it before this goes public. */
+   maps over it, so adding a second is a data edit and nothing else. */
 export const WORKSHOPS: EventItem[] = [
   {
-    title: "THE SPIDER LAB",
+    title: "Full Stack Spider-Verse Workshop",
     subtitle: "WORKSHOP 01",
     description:
-      "A hands-on build session with the people who ship it. Bring a laptop, leave with something that runs.",
+      "Build a Campus Event Registration Portal from scratch while learning modern full-stack development. Explore Next.js 15, React, Tailwind CSS, Clerk Authentication, Supabase, FastAPI, Gemini AI, and Vercel Deployment through a hands-on project. Perfect for beginner to intermediate students looking to understand real-world full-stack workflows and AI integration.",
     palette: P_2099,
     image: charSpidey,
     framing: { position: "50% 30%" },
-    registerUrl: "https://forms.gle/jQU3VMCiNX9T3rVZ8",
+    registerUrl:
+      "https://docs.google.com/forms/d/e/1FAIpQLSfDGcZIDifZCxAXELaK_WpnfrDAmB4E4SeblBNp_OA9MnAN9w/viewform?usp=publish-editor",
   },
 ];
