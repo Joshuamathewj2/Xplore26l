@@ -161,9 +161,15 @@ export type DetailSection = {
 
 /* The campus every event runs on. Kept as one constant because the address
    is repeated in each event's "Venue & Timing" block — a room number on its
-   own tells an inter-college participant nothing about where to turn up. */
-export const CAMPUS_ADDRESS =
-  "Loyola-ICAM College of Engineering and Technology, Loyola College Campus, Nungambakkam, Chennai – 600034";
+   own tells an inter-college participant nothing about where to turn up.
+
+   Split into its two halves because the countdown's venue plate sets the
+   college name and the locality on separate lines, at different weights. */
+export const CAMPUS_NAME =
+  "Loyola-ICAM College of Engineering and Technology";
+export const CAMPUS_LOCALITY =
+  "Loyola College Campus, Nungambakkam, Chennai – 600034";
+export const CAMPUS_ADDRESS = `${CAMPUS_NAME}, ${CAMPUS_LOCALITY}`;
 
 /** Room + campus, for the venue line of an event's details. */
 const venue = (room: string) => `${room} — ${CAMPUS_ADDRESS}`;
@@ -290,7 +296,10 @@ export const EVENT_DETAILS_BY_TITLE: Record<string, DetailSection[]> = {
     },
     {
       heading: "Student Coordinators",
-      points: ["Preethish — III CSE B", "Jefrin MSA — III CSE A"],
+      points: [
+        "Preethish — III CSE B — 70944 45555",
+        "Jefrin MSA — III CSE A — 72002 35885",
+      ],
     },
   ],
   "BEYOND THE WEB": [
@@ -318,6 +327,7 @@ export const EVENT_DETAILS_BY_TITLE: Record<string, DetailSection[]> = {
       heading: "General Rules",
       points: [
         "Carry your College ID Card",
+        "No on-spot registration",
         "Shortlisted teams will present on 8th August",
         "Teams with prototypes must arrange their own demonstration setup",
         "Abstract should not exceed 250 words",
@@ -329,7 +339,7 @@ export const EVENT_DETAILS_BY_TITLE: Record<string, DetailSection[]> = {
         "Research Paper: IEEE format preferred, 6–15 pages with one-page abstract",
         "Project/Prototype: Report of 3–10 pages with one-page abstract",
         "Poster: A1/A2 size (digital copy in PDF to be submitted) with a one-page abstract",
-        "Presentation: 7 minutes + 3 minutes Q&A",
+        "Presentation: 5 minutes + 2 minutes Q&A",
       ],
     },
     {
@@ -356,7 +366,10 @@ export const EVENT_DETAILS_BY_TITLE: Record<string, DetailSection[]> = {
     },
     {
       heading: "Student Coordinators",
-      points: ["Goldwin R Jaffee — III CSE A", "Dhanushree — II CSE A"],
+      points: [
+        "Goldwin R Jaffee — III CSE A — 94888 91723",
+        "Rimy John — 74189 79645",
+      ],
     },
   ],
   "MULTIVERSE BREACH": [
@@ -375,6 +388,9 @@ export const EVENT_DETAILS_BY_TITLE: Record<string, DetailSection[]> = {
       heading: "Winning Criteria",
       points: [
         "Points are earned by submitting correct flags",
+        "Easy challenge: 100 points · Medium: 150 points · Hard: 200 points",
+        "50-point bonus for clearing the Easy section within 15 minutes, the Medium section within 25 minutes, or the Hard section within 30 minutes of the start",
+        "The bonus can be claimed only once per team",
         "Highest score at the end of the event wins",
         "Ties go to whichever team reached the final score first",
         "Organizers' decisions on scoring and rankings are final",
@@ -411,19 +427,21 @@ export const EVENT_DETAILS_BY_TITLE: Record<string, DetailSection[]> = {
     {
       heading: "Important Notes",
       points: [
-        "Read every challenge carefully before attempting it",
-        "Save your work frequently and ensure a stable internet connection",
-        "Participants are responsible for their own devices",
+        "Read each challenge carefully before attempting it",
+        "Participants are responsible for following all event rules while using the laboratory systems",
         "Organizer decisions are final and cannot be challenged",
       ],
     },
     {
       heading: "Venue & Timing",
-      points: [venue("H22 (Lab)"), "9:30 AM – 11:30 AM"],
+      points: [venue("H22 (Lab)"), "12:00 PM – 2:00 PM"],
     },
     {
       heading: "Student Coordinators",
-      points: ["Mohammed Aasim T — III CSE B", "Tharsiga M — II CSE B"],
+      points: [
+        "Maria Sherlin — IV CSE B — 86678 02943",
+        "Mohammed Aasim T.A — III CSE B — 78455 37575",
+      ],
     },
   ],
   "SPIDER SENSE": [
@@ -478,7 +496,10 @@ export const EVENT_DETAILS_BY_TITLE: Record<string, DetailSection[]> = {
     },
     {
       heading: "Student Coordinators",
-      points: ["Anish Joseph Leo — III CSE A", "Pranathi — III CSE B"],
+      points: [
+        "Anish Joseph Leo — III CSE A — 93603 90775",
+        "Pranathi — III CSE B — 70104 34599",
+      ],
     },
   ],
   "SPIDER SPRINT": [
@@ -536,7 +557,10 @@ export const EVENT_DETAILS_BY_TITLE: Record<string, DetailSection[]> = {
     },
     {
       heading: "Student Coordinators",
-      points: ["Abhijeet VS — III CSE A", "Lathika Valli M — III CSE B"],
+      points: [
+        "Abhijeet V.S — III CSE A — 89395 42265",
+        "Lathika Valli M — III CSE B — 99444 01328",
+      ],
     },
   ],
   "WEB FORGE": [
@@ -544,20 +568,19 @@ export const EVENT_DETAILS_BY_TITLE: Record<string, DetailSection[]> = {
       heading: "Building Rules",
       points: [
         "Build a static website prototype using Google AI Studio only",
-        "Must include a Home Page, Navigation Bar, Hero Section, Contact Section, responsive design and every mandatory feature on your challenge card",
+        "Must include a Home Page, Navigation Bar, Hero Section and Contact Section respective to your challenge card",
         "Refine your prompts throughout the round — aim for a working MVP, not a production build",
-        "Once the hidden challenge is revealed, incorporate it into your existing site within the remaining time",
+        "Once the hidden challenges are revealed, incorporate them into your existing site within the remaining time",
       ],
     },
     {
       heading: "Winning Criteria",
       points: [
-        "Prompt Engineering — 15",
+        "Prompt Engineering — 25",
         "Creativity & Innovation — 20",
-        "Website Functionality — 25",
-        "UI & Navigation — 15",
+        "Website Functionality & UI — 20",
         "Problem Solving & Hidden Challenge Integration — 15",
-        "Presentation & Pitch — 10",
+        "Presentation & Pitch — 20",
       ],
     },
     {
@@ -574,7 +597,7 @@ export const EVENT_DETAILS_BY_TITLE: Record<string, DetailSection[]> = {
       heading: "Event Specific",
       points: [
         "Round 1 — AI Image Recreation: recreate a shared reference image in the fewest prompts; top 15 teams qualify",
-        "Round 2 — Website Prototype: build to a randomly drawn challenge card (one swap allowed), react to a Hidden Challenge revealed at the 30-minute mark, then pitch for 2–3 minutes with judge Q&A",
+        "Round 2 — Website Prototype: build to a randomly drawn challenge card (one swap allowed), react to a Hidden Challenge and a Crisis Card revealed at specific intervals, then pitch for 2–3 minutes with judge Q&A",
       ],
     },
     {
@@ -592,7 +615,10 @@ export const EVENT_DETAILS_BY_TITLE: Record<string, DetailSection[]> = {
     },
     {
       heading: "Student Coordinators",
-      points: ["Shreya Angelina — III CSE B", "Kevin Bosco — II CSE A"],
+      points: [
+        "Shreya Angelina — III CSE B — 96294 38143",
+        "Kevin Bosco — II CSE A — 63851 17773",
+      ],
     },
   ],
   "Full Stack Spider-Verse Workshop": [
@@ -680,7 +706,7 @@ export const EVENTS: EventItem[] = [
     title: "BEYOND THE WEB",
     subtitle: "DIMENSION 02",
     description:
-      "Technical research presentation. Teams of up to 3 — inter-college welcome — pitch a research paper, project, prototype or poster in 7 minutes, then defend it through 3 minutes of Q&A. Submit a one-page abstract under 250 words; only shortlisted teams present on 8th August, and the top 2 from each department go through to the finals.",
+      "Paper Presentation provides a platform for students to present their research, innovative ideas, and technical solutions. Participants will have the opportunity to showcase their work before a panel of experts, demonstrate their knowledge, and compete with fellow innovators.",
     palette: P_VENOM,
     image: charVenom,
     framing: { position: "58% 34%" },
