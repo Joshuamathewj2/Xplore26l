@@ -1284,16 +1284,24 @@ const armNow: ArmBlend = {
     whole point of the shared signal is that they cannot disagree. */
 const punchNow: PunchDrive = { torso: 0, impact: 0, grip: 0 };
 
-/* ── MOBILE POST-SPONSOR CLEAR ──
-   `#coordinators` has no beat of its own (see beats.ts: sponsors is "the
-   last reachable anchor"), so on a phone the rig just holds the sponsors
-   punch pose — full-screen, centred — for the rest of the page, sat at
-   zIndex 30 over the coordinator cards' zIndex 10. These are the target
-   char.x / scale / energy he eases toward, blended in by
-   `scrollState.postSponsorProgress`, as that section scrolls into view:
-   a small silhouette parked at the screen's right edge instead of centred
-   over the names. Desktop is untouched — this only reads on mobile. */
+/* ── POST-SPONSOR CLEAR ──
+   Nothing after `#sponsors` has a beat of its own (see beats.ts: sponsors is
+   "the last reachable anchor"), so the rig just holds the sponsors punch
+   pose for the rest of the page, sat at zIndex 30 over content pinned at
+   zIndex 10. These are the targets he eases toward, blended in by
+   `scrollState.postSponsorProgress` as the countdown scrolls into view.
+
+   PHONE: full-screen and centred is standing directly on top of the
+   countdown panels and the coordinator names, so he drops to a small
+   silhouette parked at the screen's right edge.
+
+   DESKTOP: he's already off to the right at the sponsors x of 0.72 and only
+   his punching arm crosses the strip, so this is a nudge rather than an
+   exit — he stays full size, just far enough over to clear the SECS panel.
+   ~0.2 world units is ~105px at this camera (see the sponsors beat), so
+   +0.33 buys ~170px. Past ~1.2 his outstretched arm starts leaving frame. */
 const COORD_CLEAR = { x: 0.42, scale: 0.34, energy: 0.5 };
+const COUNTDOWN_CLEAR_DESKTOP = { x: 1.05 };
 
 // Scratch target (module-level: zero per-frame allocation).
 const _beatTarget = {
@@ -1433,15 +1441,21 @@ function BeatDriver() {
       T.energy = eventsBeat.energy + (T.energy - eventsBeat.energy) * ep;
     }
 
-    // MOBILE POST-SPONSOR CLEAR — see COORD_CLEAR above. `postSponsorProgress`
-    // is 0 for the whole page until #coordinators is actually scrolling into
-    // view, so this is a no-op everywhere except the very bottom of a phone.
-    if (scrollState.isMobile && scrollState.postSponsorProgress > 0) {
+    // POST-SPONSOR CLEAR — see COORD_CLEAR above. `postSponsorProgress` is 0
+    // for the whole page until the countdown is actually scrolling into view,
+    // so this is a no-op everywhere except the bottom of the page.
+    if (scrollState.postSponsorProgress > 0) {
       const p = scrollState.postSponsorProgress;
       const ep = p * p * (3 - 2 * p); // smoothstep — gentle ease, not linear
-      T.charX += (COORD_CLEAR.x - T.charX) * ep;
-      T.charScale += (COORD_CLEAR.scale - T.charScale) * ep;
-      T.energy += (COORD_CLEAR.energy - T.energy) * ep;
+      if (scrollState.isMobile) {
+        T.charX += (COORD_CLEAR.x - T.charX) * ep;
+        T.charScale += (COORD_CLEAR.scale - T.charScale) * ep;
+        T.energy += (COORD_CLEAR.energy - T.energy) * ep;
+      } else {
+        // Position only: shrinking him here would read as him walking away
+        // mid-page, and the desktop problem is purely horizontal overlap.
+        T.charX += (COUNTDOWN_CLEAR_DESKTOP.x - T.charX) * ep;
+      }
     }
 
     if (!beatNow.initialized) {
