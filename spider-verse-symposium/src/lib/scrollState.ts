@@ -78,15 +78,17 @@ export type ScrollState = {
       resize listener. */
   isMobile: boolean;
   /**
-   * 0 → 1 as `#coordinators` scrolls up from the bottom of the viewport into
-   * full view; 0 whenever it is still below the fold.
+   * 0 → 1 as the first section after sponsors (`#countdown`, or
+   * `#coordinators` if there is no countdown) scrolls up from the bottom of
+   * the viewport into full view; 0 whenever it is still below the fold.
    *
-   * There is no story BEAT for this section — see the note at the bottom of
+   * There is no story BEAT for those sections — see the note at the bottom of
    * `beats.ts` on why `sponsors` is "the last reachable anchor" — so
    * `beatPos` simply clamps at the sponsors beat and the rig holds that
    * pose's full-screen-centred camera for the rest of the page. On a phone
-   * that frozen pose sits at zIndex 30, on top of the coordinator cards'
-   * zIndex 10, and blocks their names. This is a second, independent scroll
+   * that frozen pose sits at zIndex 30, on top of the content below it at
+   * zIndex 10, covering coordinator names and countdown panels alike. This
+   * is a second, independent scroll
    * signal (plain viewport-rect math, nothing to do with beat anchors) that
    * Spider3D blends against ON MOBILE ONLY to ease him down to a small
    * silhouette at the screen edge as the section arrives, instead of adding

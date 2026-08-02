@@ -50,10 +50,16 @@ export default function ScrollRig() {
     /* ── beat anchors: scrollY at which each beat's section is centred ── */
     let anchors: number[] = [0];
 
-    /* `#coordinators` has no beat of its own (see the note in beats.ts on why
-       `sponsors` is the last reachable anchor) — cached here so writeState
-       can read its rect on every scroll tick without re-querying the DOM. */
-    let coordinatorsEl: HTMLElement | null = null;
+    /* Whatever section comes first after sponsors — `#countdown`, falling
+       back to `#coordinators`. Neither has a beat of its own (see the note in
+       beats.ts on why `sponsors` is the last reachable anchor), so this rect
+       is what tells the rig it's time to clear out; cached here so writeState
+       can read it on every scroll tick without re-querying the DOM.
+
+       It has to be the FIRST such section, not specifically the coordinators:
+       the ramp exists to get the character off the content below sponsors,
+       and on a phone he is wide enough to cover a countdown panel. */
+    let postSponsorEl: HTMLElement | null = null;
 
     /* Cached the same way, for the `#events` "has it fully scrolled past"
        signal (see eventsClearProgress in scrollState.ts). */
@@ -109,7 +115,9 @@ export default function ScrollRig() {
       // the deck and the rig must not disagree about which layout is live.
       const isMobile = window.innerWidth < MOBILE_BREAKPOINT;
       scrollState.isMobile = isMobile;
-      coordinatorsEl = document.querySelector<HTMLElement>("#coordinators");
+      postSponsorEl =
+        document.querySelector<HTMLElement>("#countdown") ??
+        document.querySelector<HTMLElement>("#coordinators");
       eventsEl = document.querySelector<HTMLElement>("#events");
 
       // Nothing resolved (shouldn't happen) — keep the full list so the 3D
@@ -162,12 +170,14 @@ export default function ScrollRig() {
       scrollState.velocity = y - lastY;
       lastY = y;
 
-      // 0 while `#coordinators` is still below the fold, ramping to 1 as its
-      // top scrolls up to the viewport top. getBoundingClientRect() is
-      // already viewport-relative, so this needs no anchor/scrollY math.
-      if (coordinatorsEl) {
+      // 0 while the first post-sponsor section is still below the fold,
+      // ramping to 1 as its top scrolls up to the viewport top.
+      // getBoundingClientRect() is already viewport-relative, so this needs
+      // no anchor/scrollY math. Past that section the value stays clamped at
+      // 1, so everything further down the page stays cleared too.
+      if (postSponsorEl) {
         const vh = window.innerHeight;
-        const top = coordinatorsEl.getBoundingClientRect().top;
+        const top = postSponsorEl.getBoundingClientRect().top;
         scrollState.postSponsorProgress = Math.min(Math.max((vh - top) / vh, 0), 1);
       } else {
         scrollState.postSponsorProgress = 0;

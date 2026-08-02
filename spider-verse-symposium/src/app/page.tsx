@@ -9,6 +9,7 @@ import FeaturedEventsSection from "@/components/FeaturedEventsSection";
 import MiguelStage from "@/components/MiguelStage";
 import ComicStamp from "@/components/ComicStamp";
 
+import CountdownSection from "@/components/CountdownSection";
 import SpiderTracerIcon from "@/components/SpiderTracerIcon";
 import PerfHUD from "@/components/PerfHUD";
 import ProceduralPortal from "@/components/ProceduralPortal";
@@ -217,6 +218,12 @@ export default function EntryPortal() {
           <div className="absolute inset-0 halftone-bg pointer-events-none" />
         </section>
 
+        {/* ── Countdown ──
+            Sits between sponsors and the coordinators so the page ends on a
+            call to action: what it is, who backs it, when it starts, who to
+            call. */}
+        <CountdownSection />
+
         {/* ── Event coordinators ──
             Sits between the sponsors block and the footer. Numbers are real
             contact details, so they are `tel:` links (digits only in the
@@ -233,10 +240,13 @@ export default function EntryPortal() {
             alignItems: "center",
           }}
         >
+          {/* Left, not right: past the countdown the character is parked at
+              the right edge for the rest of the page, and at `right: 6%` this
+              sat underneath him. */}
           <ComicStamp
             text="SNIKT!"
             rotate={7}
-            style={{ top: "2%", right: "6%", zIndex: 5 }}
+            style={{ top: "2%", left: "6%", zIndex: 5 }}
           />
           <h2
             style={{
@@ -267,25 +277,35 @@ export default function EntryPortal() {
             Reach the team across any dimension
           </p>
 
-          {/* Wraps to a column on narrow screens rather than squeezing. */}
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              justifyContent: "center",
-              gap: "clamp(18px, 3vw, 34px)",
-            }}
-          >
+          {/* Two per row, so the office-bearers sit on the first row and the
+              event coordinators on the second — a plain wrapping flex would
+              fit all four across on a wide screen and lose that grouping.
+              Collapses to one column under 560px. */}
+          <div className="coord-grid">
             {[
               {
                 id: "01",
+                name: "Mathan Kumaar A",
+                role: "President",
+                display: "99621 29234",
+                dial: "+919962129234",
+              },
+              {
+                id: "02",
+                name: "Arockia Mithuna Nimso N",
+                role: "Vice President",
+                display: "91235 14795",
+                dial: "+919123514795",
+              },
+              {
+                id: "03",
                 name: "Kaif",
                 role: "Event Coordinator",
                 display: "93453 65508",
                 dial: "+919345365508",
               },
               {
-                id: "02",
+                id: "04",
                 name: "Jeroline",
                 role: "Event Coordinator",
                 display: "73583 03462",
@@ -395,6 +415,20 @@ export default function EntryPortal() {
               </a>
             ))}
           </div>
+
+          <style>{`
+            .coord-grid {
+              display: grid;
+              grid-template-columns: repeat(2, minmax(230px, 300px));
+              justify-content: center;
+              gap: clamp(18px, 3vw, 34px);
+            }
+            @media (max-width: 560px) {
+              .coord-grid {
+                grid-template-columns: minmax(0, 320px);
+              }
+            }
+          `}</style>
         </section>
 
         <footer
